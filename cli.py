@@ -284,7 +284,8 @@ def menu(x, y, w, h):
     at(x + 2, y + 7, "[3] multi send", c['w'])
     at(x + 2, y + 9, "[4] export keys", c['w'])
     at(x + 2, y + 11, "[5] clear hist", c['w'])
-    at(x + 2, y + 13, "[0] exit", c['w'])
+    at(x + 2, y + 13, "[6] send 1 OCT to list", c['w'])  # NEW FEATURE ADDED HERE
+    at(x + 2, y + 15, "[0] exit", c['w'])
     at(x + 2, y + h - 2, "command: ", c['B'] + c['y'])
 
 async def scr():
@@ -295,10 +296,10 @@ async def scr():
     at((cr[0] - len(t)) // 2, 1, t, c['B'] + c['w'])
     
     sidebar_w = 28
-    menu(2, 3, sidebar_w, 17)
+    menu(2, 3, sidebar_w, 19)  # Increased height to accommodate new option
     
     # info box
-    info_y = 21
+    info_y = 23  # Adjusted position
     box(2, info_y, sidebar_w, 9)
     at(4, info_y + 2, "testnet environment.", c['y'])
     at(4, info_y + 3, "actively updated.", c['y'])
@@ -313,7 +314,7 @@ async def scr():
     
     at(2, cr[1] - 1, " " * (cr[0] - 4), c['bg'])
     at(2, cr[1] - 1, "ready", c['bgg'] + c['w'])
-    return await ainp(13, 18)
+    return await ainp(13, 20)  # Adjusted input position
 
 async def tx():
     cr = sz()
@@ -502,6 +503,144 @@ async def multi():
     at(x + 2, y + hb - 2, f"completed: {s_total} success, {f_total} failed", c['bgg'] + c['w'] if f_total == 0 else c['bgr'] + c['w'])
     await awaitkey()
 
+# NEW FEATURE: SEND 1 OCT TO ADDRESSES IN LIST.TXT
+async def send_to_list():
+    cr = sz()
+    cls()
+    fill()
+    w, hb = 70, cr[1] - 4
+    x = (cr[0] - w) // 2
+    y = 2
+    
+    # Read addresses from list.txt
+    addresses = []
+    try:
+        with open('list.txt', 'r') as f:
+            addresses = [line.strip() for line in f.readlines() if line.strip()]
+    except FileNotFoundError:
+        box(x, y, w, 8, "error")
+        at(x + 2, y + 3, "file 'list.txt' not found!", c['R'])
+        at(x + 2, y + 5, "create a file named list.txt with", c['y'])
+        at(x + 2, y + 6, "one address per line", c['y'])
+        await awaitkey()
+        return
+    
+    # Filter valid addresses
+    valid_addresses = [addr for addr in addresses if b58.match(addr)]
+    invalid_count = len(addresses) - len(valid_addresses)
+    
+    if not valid_addresses:
+        box(x, y, w, 8, "error")
+        at(x + 2, y + 3, "no valid addresses found in list.txt", c['R'])
+        at(x + 2, y + 5, "all addresses must be valid OCT addresses", c['y'])
+        await awaitkey()
+        return
+    
+    # Display confirmation
+    box(x, y, w, hb, "send 1 OCT to list")
+    at(x + 2, y + 2, f"found {len(valid_addresses)} valid addresses in list.txt", c['g'])
+    if invalid_count > 0:
+        at(x + 2, y + 3, f"{invalid_count} invalid addresses skipped", c['y'])
+    
+    amount_per = 1.0
+    total_amount = len(valid_addresses) * amount_per
+    fee_per = 0.001  # transaction fee per send
+    total_fee = len(valid_addresses) * fee_per
+    total_required = total_amount + total_fee
+    
+    at(x + 2, y + 5, "each address will receive:", c['c'])
+    at(x + 2, y + 6, f"  {amount_per:.6f} OCT", c['w'])
+    at(x + 2, y + 7, f"total to send: {total_amount:.6f} OCT", c['c'])
+    at(x + 2, y + 8, f"estimated fees: {total_fee:.6f} OCT", c['c'])
+    at(x + 2, y + 9, f"total required: {total_required:.6f} OCT", c['B'] + c['y'])
+    
+    # Check balance
+    global lu
+    lu = 0
+    n, b = await st()
+    if n is None:
+        at(x + 2, y + 12, "failed to get nonce!", c['bgr'] + c['w'])
+        await awaitkey()
+        return
+    
+    if b < total_required:
+        at(x + 2, y + 11, "─" * (w - 4), c['w'])
+        at(x + 2, y + 12, f"insufficient balance! ({b:.6f} < {total_required:.6f})", c['bgr'] + c['w'])
+        at(x + 2, y + 13, "press enter to go back...", c['y'])
+        await ainp(x + 2, y + 14)
+        return
+    
+    at(x + 2, y + 11, "─" * (w - 4), c['w'])
+    at(x + 2, y + 12, f"your balance: {b:.6f} OCT", c['g'])
+    at(x + 2, y + 13, f"nonce: {n + 1}", c['g'])
+    
+    at(x + 2, y + 15, "confirm sending? [y/n]: ", c['B'] + c['y'])
+    if (await ainp(x + 27, y + 15)).strip().lower() != 'y':
+        return
+    
+    # Start sending
+    spin_task = asyncio.create_task(spin_animation(x + 2, y + 17, "sending transactions"))
+    
+    batch_size = 5
+    batches = [valid_addresses[i:i+batch_size] for i in range(0, len(valid_addresses), batch_size)]
+    s_total, f_total = 0, 0
+    
+    for batch_idx, batch in enumerate(batches):
+        tasks = []
+        for i, addr in enumerate(batch):
+            idx = batch_idx * batch_size + i
+            at(x + 2, y + 18, f"[{idx + 1}/{len(valid_addresses)}] preparing...", c['c'])
+            t, _ = mk(addr, amount_per, n + 1 + idx)
+            tasks.append(snd(t))
+        
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        for i, (result, addr) in enumerate(zip(results, batch)):
+            idx = batch_idx * batch_size + i
+            if isinstance(result, Exception):
+                f_total += 1
+                at(x + 55, y + 18, "✗ fail ", c['R'])
+            else:
+                ok, hs, _, _ = result
+                if ok:
+                    s_total += 1
+                    at(x + 55, y + 18, "✓ ok   ", c['g'])
+                    h.append({
+                        'time': datetime.now(),
+                        'hash': hs,
+                        'amt': amount_per,
+                        'to': addr,
+                        'type': 'out',
+                        'ok': True
+                    })
+                else:
+                    f_total += 1
+                    at(x + 55, y + 18, "✗ fail ", c['R'])
+            at(x + 2, y + 18, f"[{idx + 1}/{len(valid_addresses)}] sent 1 OCT to {addr[:20]}...", c['c'])
+            await asyncio.sleep(0.05)
+    
+    spin_task.cancel()
+    try:
+        await spin_task
+    except asyncio.CancelledError:
+        pass
+    
+    lu = 0
+    at(x + 2, y + 18, " " * 65, c['bg'])
+    at(x + 2, y + 18, f"completed: {s_total} success, {f_total} failed", 
+       c['bgg'] + c['w'] if f_total == 0 else c['bgr'] + c['w'])
+    
+    # Save failed addresses if any
+    if f_total > 0:
+        failed_addresses = [addr for i, addr in enumerate(valid_addresses) 
+                          if i < len(results) and (isinstance(results[i], Exception) or not results[i][0])]
+        with open('failed.txt', 'w') as f:
+            for addr in failed_addresses:
+                f.write(addr + '\n')
+        at(x + 2, y + 19, f"failed addresses saved to failed.txt", c['y'])
+    
+    await awaitkey()
+
 async def exp():
     cr = sz()
     cls()
@@ -602,6 +741,8 @@ async def main():
             elif cmd == '5':
                 h.clear()
                 lh = 0
+            elif cmd == '6':  # NEW FEATURE HANDLER
+                await send_to_list()
             elif cmd in ['0', 'q', '']:
                 break
     except:
