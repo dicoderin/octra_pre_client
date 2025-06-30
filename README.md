@@ -1,53 +1,110 @@
-# octra terminal client
+# Octra CLI Wallet - Terminal Wallet untuk Jaringan Octra
 
-a terminal wallet reminiscent of dos-era tui interfaces — but built with modern asynchronous architecture
-
-## what it does
-
-- shows your octra wallet balance and tx history  
-- lets you send one or many transactions  
-- exports your private key or full wallet file  
-
-## works on
-
-- linux  
-- mac  
-- windows (some features like clipboard may not work)
-
-## what you need
-
-- python 3.8 or higher  
-- internet connection  
-- your wallet file (private key)
-
-## how to install and run (step by step)
-
-1. open terminal  
-
-2. run these commands one by one:
+Sebuah dompet command-line interaktif untuk berinteraksi dengan blockchain **Octra Network**. Dompet ini menyediakan antarmuka terminal yang kaya fitur dengan visualisasi transaksi real-time, manajemen aset, dan kemampuan transaksi batch.
 
 ```bash
-git clone https://github.com/octra-labs/octra_pre_client.git
-cd octra_pre_client
-python3 -m venv venv
-source venv/bin/activate # for windows use: venv\Scripts\activate
-pip install -r requirements.txt
-cp wallet.json.example wallet.json
+#!/usr/bin/env python3
+# Kode lengkap tersedia di atas
 ```
 
-3. open wallet.json and edit it (change placeholders to your wallet data):
+## 🌟 Fitur Utama
 
-```json
-{
-  "priv": "private-key-here",
-  "addr": "octxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-  "rpc": "https://octra.network"
-}
+- **Antarmuka Pengguna Terminal yang Kaya**:
+  - Visualisasi saldo dan transaksi real-time
+  - Warna dan tata letak intuitif
+  - Animasi spinner untuk operasi jaringan
+
+- **Manajemen Aset**:
+  - Cek saldo dan nonce
+  - Riwayat transaksi dengan status real-time
+  - Detail transaksi lengkap (hash, jumlah, penerima)
+
+- **Transaksi**:
+  - Pengiriman single transaction
+  - **Multi-send transaction** (batch ke banyak alamat)
+  - **Fitur Baru**: Kirim 1 OCT ke banyak alamat dari file `list.txt`
+  - Estimasi biaya transaksi otomatis
+
+- **Keamanan**:
+  - Ekspor kunci pribadi (dengan peringatan keamanan)
+  - Penyimpanan dompet terenkripsi
+  - Validasi alamat OCTRA
+
+- **Fitur Tambahan**:
+  - Manajemen transaksi tertunda (staging)
+  - Penyortiran transaksi berdasarkan waktu
+  - Pelacakan transaksi gagal dan ekspor ke `failed.txt`
+
+## ⚙️ Persyaratan Sistem
+
+- Python 3.7+
+- Dependencies:
+  ```bash
+  pip install aiohttp base58 pyperclick nacl
+  ```
+
+## 🚀 Memulai
+
+1. **Siapkan dompet**:
+   ```bash
+   echo '{"priv":"your_private_key","addr":"your_address","rpc":"https://octra.network"}' > wallet.json
+   ```
+
+2. **Jalankan aplikasi**:
+   ```bash
+   chmod +x cli.py
+   ./cli.py
+   ```
+
+3. **Gunakan menu utama**:
+   ```
+   [1] send tx       [4] export keys
+   [2] refresh       [5] clear history
+   [3] multi send    [6] send 1 OCT to list
+   ```
+
+## 🆕 Fitur Baru: Kirim ke Banyak Alamat
+
+Fitur unggulan terbaru memungkinkan pengiriman 1 OCT ke banyak alamat sekaligus dari file teks:
+
+1. Buat file `list.txt` berisi alamat-alamat OCTRA (satu alamat per baris)
+2. Pilih menu `[6] send 1 OCT to list`
+3. Sistem akan:
+   - Otomatis validasi alamat
+   - Hitung total OCT yang dibutuhkan
+   - Proses pengiriman batch
+   - Simpan alamat gagal ke `failed.txt`
+
+```plaintext
+found 120 valid addresses in list.txt
+total required: 123.456789 OCT
+[23/120] sent 1 OCT to oct1abc...xyz
+completed: 118 success, 2 failed
 ```
 
-3. run
+ ##🛠️ Teknologi Dibawah Hood
 
-```bash
-./run.sh       # on linux/mac
-run.bat        # on windows
+- **Asynchronous** I/O dengan `aiohttp` untuk kinerja maksimal
+- **Kriptografi** menggunakan `nacl.signing` untuk keamanan transaksi
+- **Manajemen Thread** dengan `ThreadPoolExecutor`
+- **Antarmuka Terminal** dinamis dengan kontrol kursor ANSI
+- **Format Transaksi** sesuai standar Octra Network
+
+## ⚠️ Catatan Penting
+
+- **Dompet Testnet**: Hanya gunakan dengan token testnet!
+- **Jaga Kunci Pribadi**: Jangan pernah bagikan `wallet.json`
+- **Konfirmasi Transaksi**: Selalu verifikasi detail sebelum mengirim
+- **Backup Reguler**: Simpan salinan aman dari `wallet.json`
+
+ ##📜 Lisensi
+
+```plaintext
+Octra CLI Wallet - Terminal Wallet for Octra Network
+Copyright (C) 2024 Octra Project
+
+Program ini adalah perangkat lunak gratis: Anda dapat menyebarluaskannya dan/atau memodifikasi
+dibawah ketentuan GNU General Public License versi 3.
 ```
+
+> **Disclaimer**: Ini adalah versi pengembangan (dev) - laporkan masalah di [tracker issue](https://github.com/octra/cli-wallet/issues)
