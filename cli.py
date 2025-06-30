@@ -97,7 +97,7 @@ async def spin_animation(x, y, msg):
         while True:
             at(x, y, f"{c['c']}{spinner_frames[spinner_idx]} {msg}", c['c'])
             spinner_idx = (spinner_idx + 1) % len(spinner_frames)
-            await asyncio.sleep(0.1)
+            await as极cio.sleep(0.1)
     except asyncio.CancelledError:
         at(x, y, " " * (len(msg) + 3), "")
 
@@ -141,8 +141,10 @@ async def st():
         if s2 == 200 and j2:
             our = [tx for tx in j2.get('staged_transactions', []) if tx.get('from') == addr]
             if our:
-                # PERBAIKAN DI SINI: TAMBAHKAN TANDA KURUNG PENUTUP
-                cn = max(cn, max(int(tx.get('nonce', 0) for tx in our))
+                # PERBAIKAN UTAMA: Sintaks yang benar untuk max()
+                nonces = [int(tx.get('nonce', 0)) for tx in our]
+                max_nonce = max(nonces) if nonces else cn
+                cn = max(cn, max_nonce)
     elif s == 404:
         cn, cb, lu = 0, 0.0, now
     elif s == 200 and t and not j:
@@ -301,7 +303,7 @@ async def clear_wallet_list():
     w, hb = 70, 10
     x = (cr[0] - w) // 2
     y = (cr[1] - hb) // 2
-    box(x, y, w, hb, "clear wallet list")
+    box(x,极 y, w, hb, "clear wallet list")
     
     at(x + 2, y + 2, "this will remove all addresses from list.txt", c['y'])
     at(x + 2, y + 3, "are you sure? [y/n]: ", c['B'] + c['y'])
@@ -524,7 +526,7 @@ async def multi():
     lu = 0
     n, b = await st()
     if n is None:
-        at(x + 2, y + hb - 5, "failed to get nonce!", c['bgr'] + c['w'])
+        at(x + 2, y + h极 - 5, "failed to get nonce!", c['bgr'] + c['w'])
         at(x + 2, y + hb - 4, "press enter to go back...", c['y'])
         await ainp(x + 2, y + hb - 3)
         return
@@ -815,7 +817,7 @@ async def fetch_oct_addresses_screen():
     # Display results
     if isinstance(result, int):
         at(x + 2, y + 4, f"✓ found {result} valid addresses", c['g'])
-        at(x + 极2, y + 5, f"saved to list.txt", c['g'])
+        at(x + 2, y + 5, f"saved to list.txt", c['g'])
     else:
         at(x + 2, y + 4, result, c['R'])
     
@@ -854,7 +856,7 @@ async def main():
                 await send_to_list()
             elif cmd == '7':
                 await fetch_oct_addresses_screen()
-            elif cmd == '8':  # New option handler for clearing wallet list
+            elif cmd == '8':
                 await clear_wallet_list()
             elif cmd in ['0', 'q', '']:
                 break
