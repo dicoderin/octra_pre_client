@@ -97,7 +97,7 @@ async def spin_animation(x, y, msg):
         while True:
             at(x, y, f"{c['c']}{spinner_frames[spinner_idx]} {msg}", c['c'])
             spinner_idx = (spinner_idx + 1) % len(spinner_frames)
-            await as极cio.sleep(0.1)
+            await asyncio.sleep(0.1)
     except asyncio.CancelledError:
         at(x, y, " " * (len(msg) + 3), "")
 
@@ -114,6 +114,8 @@ async def req(m, p, d=None, t=10):
             except:
                 j = None
             return resp.status, text, j
+    except asyncio.CancelledError:
+        raise
     except asyncio.TimeoutError:
         return 0, "timeout", None
     except Exception as e:
@@ -141,7 +143,6 @@ async def st():
         if s2 == 200 and j2:
             our = [tx for tx in j2.get('staged_transactions', []) if tx.get('from') == addr]
             if our:
-                # PERBAIKAN UTAMA: Sintaks yang benar untuk max()
                 nonces = [int(tx.get('nonce', 0)) for tx in our]
                 max_nonce = max(nonces) if nonces else cn
                 cn = max(cn, max_nonce)
@@ -261,7 +262,6 @@ async def expl(x, y, w, hb):
         at(x + 2, y_offset + 9, "─" * (w - 4), c['w'])
         seen_hashes = set()
         display_count = 0
-        # Sort by time descending (newest first)
         sorted_h = sorted(h, key=lambda x: x['time'], reverse=True)
         for tx in sorted_h:
             if tx['hash'] in seen_hashes:
@@ -270,13 +270,11 @@ async def expl(x, y, w, hb):
             if display_count >= min(len(h), hb - 15):
                 break
             is_pending = not tx.get('epoch')
-            # Highlight pending transactions
             time_color = c['y'] if is_pending else c['w']
             at(x + 2, y_offset + 10 + display_count, tx['time'].strftime('%H:%M:%S'), time_color)
             at(x + 11, y_offset + 10 + display_count, " in" if tx['type'] == 'in' else "out", c['g'] if tx['type'] == 'in' else c['R'])
             at(x + 16, y_offset + 10 + display_count, f"{float(tx['amt']):>10.6f}", c['w'])
             at(x + 28, y_offset + 10 + display_count, str(tx.get('to', '---')), c['y'])
-            # Highlight pending status
             status_text = "pen" if is_pending else f"e{tx.get('epoch', 0)}"
             status_color = c['y'] + c['B'] if is_pending else c['c']
             at(x + w - 6, y_offset + 10 + display_count, status_text, status_color)
@@ -298,12 +296,11 @@ def menu(x, y, w, h):
     at(x, y + 22, "select option: ", c['B'] + c['y'])
 
 async def clear_wallet_list():
-    """Clear all addresses from list.txt"""
     cr = sz()
     w, hb = 70, 10
     x = (cr[0] - w) // 2
     y = (cr[1] - hb) // 2
-    box(x,极 y, w, hb, "clear wallet list")
+    box(x, y, w, hb, "clear wallet list")
     
     at(x + 2, y + 2, "this will remove all addresses from list.txt", c['y'])
     at(x + 2, y + 3, "are you sure? [y/n]: ", c['B'] + c['y'])
@@ -311,7 +308,6 @@ async def clear_wallet_list():
     
     if confirm.strip().lower() == 'y':
         try:
-            # Clear the file by opening in write mode and closing immediately
             with open('list.txt', 'w') as f:
                 pass
             at(x + 2, y + 5, "list.txt has been cleared.", c['g'])
@@ -324,19 +320,8 @@ async def clear_wallet_list():
     await awaitkey()
 
 async def fetch_oct_addresses():
-    """Fetch oct addresses from API and save to list.txt"""
-    cr = sz()
-    w, hb = 70, 10
-    x = (cr[0] - w) // 2
-    y = (cr[1] - hb) // 2
-    box(x, y, w, hb, "fetch oct addresses")
-    
-    # Create spinner animation
-    spin_task = asyncio.create_task(spin_animation(x + 2, y + 3, "fetching addresses..."))
-    
+    api_url = "https://octrascan.io/api/txs?offset=100"
     try:
-        # Make API request
-        api_url = "https://octrascan.io/api/txs?offset=100"
         async with aiohttp.ClientSession() as session:
             async with session.get(api_url) as response:
                 if response.status != 200:
@@ -345,17 +330,14 @@ async def fetch_oct_addresses():
                 data = await response.json()
                 addresses = set()
                 
-                # Extract addresses from transactions
                 for tx in data.get('transactions', []):
                     if tx.get('from', '').startswith('oct'):
                         addresses.add(tx['from'])
                     if tx.get('to', '').startswith('oct'):
                         addresses.add(tx['to'])
                 
-                # Filter valid addresses
                 valid_addresses = [addr for addr in addresses if b58.match(addr)]
                 
-                # Save to file
                 with open('list.txt', 'w') as f:
                     for addr in valid_addresses:
                         f.write(addr + '\n')
@@ -364,44 +346,31 @@ async def fetch_oct_addresses():
     
     except Exception as e:
         return f"Error: {str(e)}"
-    
-    finally:
-        spin_task.cancel()
-        try:
-            await spin_task
-        except asyncio.CancelledError:
-            pass
 
 async def scr():
     cr = sz()
     cls()
     fill()
-    # Header with subtle coloring
     t = f" octra wallet v0.0.12 │ {datetime.now().strftime('%H:%M:%S')} "
     at((cr[0] - len(t)) // 2, 1, t, c['B'] + c['c'])
     at(1, 2, "─" * cr[0], c['c'])
     
     sidebar_w = 28
+    menu(2, 4, sidebar_w, 23)
     
-    # Menu section with cleaner layout
-    menu(2, 4, sidebar_w, 23)  # Adjusted height
-    
-    # Information panel with cleaner design
-    info_y = 28  # Adjusted position
+    info_y = 28
     at(2, info_y, "INFORMATION", c['B'] + c['c'])
     at(2, info_y + 1, "───────────", c['c'])
     at(4, info_y + 3, "testnet environment", c['y'])
     at(4, info_y + 4, "tokens have no value", c['y'])
     at(4, info_y + 5, "use for testing only", c['y'])
     
-    # Explorer section with cleaner layout
     explorer_x = sidebar_w + 4
     explorer_w = cr[0] - explorer_x - 2
     await expl(explorer_x, 4, explorer_w, cr[1] - 6)
     
-    # Status bar
     at(2, cr[1] - 1, " ready ", c['g'])
-    return await ainp(18, 25)  # Adjusted input position
+    return await ainp(18, 25)
 
 async def tx():
     cr = sz()
@@ -413,7 +382,7 @@ async def tx():
     box(x, y, w, hb, "send transaction")
     at(x + 2, y + 2, "to address: (or [esc] to cancel)", c['y'])
     at(x + 2, y + 3, "─" * (w - 4), c['w'])
-    to = await ainp(x + 2, y + 4)
+    to = await ain极(x + 2, y + 4)
     if not to or to.lower() == 'esc':
         return
     if not b58.match(to):
@@ -429,7 +398,7 @@ async def tx():
         return
     if not re.match(r"^\d+(\.\d+)?$", a) or float(a) <= 0:
         at(x + 2, y + 14, "invalid amount!", c['bgr'] + c['w'])
-        at(x + 2, y + 15, "press enter to go back...", c['y'])
+        at(x + 2, y + 极15, "press enter to go back...", c['y'])
         await ainp(x + 2, y + 16)
         return
     a = float(a)
@@ -526,7 +495,7 @@ async def multi():
     lu = 0
     n, b = await st()
     if n is None:
-        at(x + 2, y + h极 - 5, "failed to get nonce!", c['bgr'] + c['w'])
+        at(x + 2, y + hb - 5, "failed to get nonce!", c['bgr'] + c['w'])
         at(x + 2, y + hb - 4, "press enter to go back...", c['y'])
         await ainp(x + 2, y + hb - 3)
         return
@@ -598,7 +567,6 @@ async def send_to_list():
     x = (cr[0] - w) // 2
     y = 2
     
-    # Read addresses from list.txt
     addresses = []
     try:
         with open('list.txt', 'r') as f:
@@ -611,7 +579,6 @@ async def send_to_list():
         await awaitkey()
         return
     
-    # Filter valid addresses
     valid_addresses = [addr for addr in addresses if b58.match(addr)]
     invalid_count = len(addresses) - len(valid_addresses)
     
@@ -622,7 +589,6 @@ async def send_to_list():
         await awaitkey()
         return
     
-    # Display confirmation
     box(x, y, w, hb, "send 1 OCT to list")
     at(x + 2, y + 2, f"found {len(valid_addresses)} valid addresses in list.txt", c['g'])
     if invalid_count > 0:
@@ -630,7 +596,7 @@ async def send_to_list():
     
     amount_per = 1.0
     total_amount = len(valid_addresses) * amount_per
-    fee_per = 0.001  # transaction fee per send
+    fee_per = 0.001
     total_fee = len(valid_addresses) * fee_per
     total_required = total_amount + total_fee
     
@@ -640,7 +606,6 @@ async def send_to_list():
     at(x + 2, y + 8, f"estimated fees: {total_fee:.6f} OCT", c['c'])
     at(x + 2, y + 9, f"total required: {total_required:.6f} OCT", c['B'] + c['y'])
     
-    # Check balance
     global lu
     lu = 0
     n, b = await st()
@@ -664,7 +629,6 @@ async def send_to_list():
     if (await ainp(x + 27, y + 15)).strip().lower() != 'y':
         return
     
-    # Start sending
     spin_task = asyncio.create_task(spin_animation(x + 2, y + 17, "sending transactions"))
     
     batch_size = 5
@@ -685,12 +649,12 @@ async def send_to_list():
             idx = batch_idx * batch_size + i
             if isinstance(result, Exception):
                 f_total += 1
-                at(x + 550, y + 18, "✗ fail ", c['R'])
+                at(x + 55, y + 18, "✗ fail ", c['R'])
             else:
                 ok, hs, _, _ = result
                 if ok:
                     s_total += 1
-                    at(x + 550, y + 18, "✓ ok   ", c['g'])
+                    at(x + 55, y + 18, "✓ ok   ", c['g'])
                     h.append({
                         'time': datetime.now(),
                         'hash': hs,
@@ -716,7 +680,6 @@ async def send_to_list():
     at(x + 2, y + 18, f"completed: {s_total} success, {f_total} failed", 
        c['bgg'] + c['w'] if f_total == 0 else c['bgr'] + c['w'])
     
-    # Save failed addresses if any
     if f_total > 0:
         failed_addresses = [addr for i, addr in enumerate(valid_addresses) 
                           if i < len(results) and (isinstance(results[i], Exception) or not results[i][0])]
@@ -800,7 +763,6 @@ async def exp():
         await awaitkey()
 
 async def fetch_oct_addresses_screen():
-    """Display screen for fetching oct addresses"""
     cr = sz()
     cls()
     fill()
@@ -811,10 +773,8 @@ async def fetch_oct_addresses_screen():
     
     at(x + 2, y + 2, "fetching addresses from octrascan.io...", c['y'])
     
-    # Run fetch operation
     result = await fetch_oct_addresses()
     
-    # Display results
     if isinstance(result, int):
         at(x + 2, y + 4, f"✓ found {result} valid addresses", c['g'])
         at(x + 2, y + 5, f"saved to list.txt", c['g'])
