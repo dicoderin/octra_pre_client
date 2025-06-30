@@ -168,7 +168,7 @@ async def gh():
     
     if j and 'recent_transactions' in j:
         tx_hashes = [ref["hash"] for ref in j.get('recent_transactions', [])]
-        tx_results = await asyncio.gather(*[req('GET', f'/tx/{hash}', 5) for hash in tx_hashes], return_exceptions=True)
+        tx_results = await asyncio.gather(*[req('GET', f'/tx/{hsh}', 5) for hsh in tx_hashes], return_exceptions=True)
         
         existing_hashes = {tx['hash'] for tx in h}
         nh = []
@@ -178,7 +178,7 @@ async def gh():
                 continue
             s2, _, j2 = result
             if s2 == 200 and j2 and 'parsed_tx' in j2:
-                p = j2['parsed_tx']
+                p = j2['parsed_tx']  # FIXED: Corrected variable name here
                 tx_hash = ref['hash']
                 
                 if tx_hash in existing_hashes:
@@ -289,7 +289,7 @@ def menu(x, y, w, h):
     at(x, y + 11, "[5] clear history", c['w'])
     at(x, y + 13, "[6] send to list", c['w'])
     at(x, y + 15, "[7] fetch oct addresses", c['w'])
-    at(x, y + 17, "[8] clear wallet list", c['w'])  # New option
+    at(x, y + 17, "[8] clear wallet list", c['w'])
     at(x, y + 19, "[0] exit", c['w'])
     at(x, y + 21, "─" * (w - 2), c['c'])
     at(x, y + 22, "select option: ", c['B'] + c['y'])
