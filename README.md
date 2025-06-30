@@ -97,7 +97,7 @@ completed: 118 success, 2 failed
 - **Konfirmasi Transaksi**: Selalu verifikasi detail sebelum mengirim
 - **Backup Reguler**: Simpan salinan aman dari `wallet.json`
 
- ##📜 Lisensi
+ ## 📜 Lisensi
 
 ```plaintext
 Octra CLI Wallet - Terminal Wallet for Octra Network
@@ -107,4 +107,4 @@ Program ini adalah perangkat lunak gratis: Anda dapat menyebarluaskannya dan/ata
 dibawah ketentuan GNU General Public License versi 3.
 ```
 
-> **Disclaimer**: Ini adalah versi pengembangan (dev) - laporkan masalah di [tracker issue](https://github.com/octra/cli-wallet/issues)
+> **Disclaimer**: Ini adalah versi pengembangan (dev) - laporkan masalah di [tracker issue](https://github.com/dicoderin/octra_pre_client/issues)
