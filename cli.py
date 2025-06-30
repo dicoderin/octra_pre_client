@@ -9,13 +9,13 @@ c = {'r': '\033[0m', 'b': '\033[94m', 'c': '\033[96m', 'g': '\033[92m', 'y': '\0
 priv, addr, rpc = None, None, None
 sk, pub = None, None
 b58 = re.compile(r"^oct[1-9A-HJ-NP-Za-km-z]{44}$")
-Î¼ = 1_000_000
+μ = 1_000_000
 h = []
 cb, cn, lu, lh = None, None, 0, 0
 session = None
 executor = ThreadPoolExecutor(max_workers=1)
 stop_flag = threading.Event()
-spinner_frames = ['â ‹', 'â ™', 'â ¹', 'â ¸', 'â ¼', 'â ´', 'â ¦', 'â §', 'â ‡', 'â ']
+spinner_frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
 spinner_idx = 0
 
 def cls():
@@ -84,12 +84,12 @@ def fill():
     print("\033[H", end='')
 
 def box(x, y, w, h, t=""):
-    print(f"\033[{y};{x}H{c['bg']}{c['w']}â”Œ{'â”€' * (w - 2)}â”{c['bg']}")
+    print(f"\033[{y};{x}H{c['bg']}{c['w']}┌{'─' * (w - 2)}┐{c['bg']}")
     if t:
-        print(f"\033[{y};{x}H{c['bg']}{c['w']}â”¤ {c['B']}{t} {c['w']}â”œ{c['bg']}")
+        print(f"\033[{y};{x}H{c['bg']}{c['w']}┤ {c['B']}{t} {c['w']}├{c['bg']}")
     for i in range(1, h - 1):
-        print(f"\033[{y + i};{x}H{c['bg']}{c['w']}â”‚{' ' * (w - 2)}â”‚{c['bg']}")
-    print(f"\033[{y + h - 1};{x}H{c['bg']}{c['w']}â””{'â”€' * (w - 2)}â”˜{c['bg']}")
+        print(f"\033[{y + i};{x}H{c['bg']}{c['w']}│{' ' * (w - 2)}│{c['bg']}")
+    print(f"\033[{y + h - 1};{x}H{c['bg']}{c['w']}└{'─' * (w - 2)}┘{c['bg']}")
 
 async def spin_animation(x, y, msg):
     global spinner_idx
@@ -186,7 +186,7 @@ async def gh():
                 
                 ii = p.get('to') == addr
                 ar = p.get('amount_raw', p.get('amount', '0'))
-                a = float(ar) if '.' in str(ar) else int(ar) / Î¼
+                a = float(ar) if '.' in str(ar) else int(ar) / μ
                 nh.append({
                     'time': datetime.fromtimestamp(p.get('timestamp', 0)),
                     'hash': tx_hash,
@@ -199,7 +199,7 @@ async def gh():
                 })
         
         oh = datetime.now() - timedelta(hours=1)
-        h[:] = sorted(nh + [tx for tx in h if tx.get('time', datetime.now()) > oh], key=lambda x: x['time'], reverse=True)[:1000]
+        h[:] = sorted(nh + [tx for tx in h if tx.get('time', datetime.now()) > oh], key=lambda x: x['time'], reverse=True)[:50]
         lh = now
     elif s == 404 or (s == 200 and t and 'no transactions' in t.lower()):
         h.clear()
@@ -209,7 +209,7 @@ def mk(to, a, n):
     tx = {
         "from": addr,
         "to_": to,
-        "amount": str(int(a * Î¼)),
+        "amount": str(int(a * μ)),
         "nonce": int(n),
         "ou": "1" if a < 1000 else "3",
         "timestamp": time.time() + random.random() * 0.01
@@ -246,14 +246,14 @@ async def expl(x, y, w, hb):
     sc = len([tx for tx in j.get('staged_transactions', []) if tx.get('from') == addr]) if j else 0
     at(x + 2, y + 6, "staging:", c['c'])
     at(x + 11, y + 6, f"{sc} pending" if sc else "none", c['y'] if sc else c['w'])
-    at(x + 1, y + 7, "â”€" * (w - 2), c['w'])
+    at(x + 1, y + 7, "─" * (w - 2), c['w'])
     
     at(x + 2, y + 8, "recent transactions:", c['B'] + c['c'])
     if not h:
         at(x + 2, y + 10, "no transactions yet", c['y'])
     else:
         at(x + 2, y + 10, "time     type  amount      address", c['c'])
-        at(x + 2, y + 11, "â”€" * (w - 4), c['w'])
+        at(x + 2, y + 11, "─" * (w - 4), c['w'])
         seen_hashes = set()
         display_count = 0
         # Sort by time descending (newest first)
@@ -292,7 +292,7 @@ async def scr():
     cr = sz()
     cls()
     fill()
-    t = f" octra pre-client v0.0.12 (dev) â”‚ {datetime.now().strftime('%H:%M:%S')} "
+    t = f" octra pre-client v0.0.12 (dev) │ {datetime.now().strftime('%H:%M:%S')} "
     at((cr[0] - len(t)) // 2, 1, t, c['B'] + c['w'])
     
     sidebar_w = 28
@@ -325,7 +325,7 @@ async def tx():
     y = (cr[1] - hb) // 2
     box(x, y, w, hb, "send transaction")
     at(x + 2, y + 2, "to address: (or [esc] to cancel)", c['y'])
-    at(x + 2, y + 3, "â”€" * (w - 4), c['w'])
+    at(x + 2, y + 3, "─" * (w - 4), c['w'])
     to = await ainp(x + 2, y + 4)
     if not to or to.lower() == 'esc':
         return
@@ -336,7 +336,7 @@ async def tx():
         return
     at(x + 2, y + 5, f"to: {to}", c['g'])
     at(x + 2, y + 7, "amount: (or [esc] to cancel)", c['y'])
-    at(x + 2, y + 8, "â”€" * (w - 4), c['w'])
+    at(x + 2, y + 8, "─" * (w - 4), c['w'])
     a = await ainp(x + 2, y + 9)
     if not a or a.lower() == 'esc':
         return
@@ -359,7 +359,7 @@ async def tx():
         at(x + 2, y + 15, "press enter to go back...", c['y'])
         await ainp(x + 2, y + 16)
         return
-    at(x + 2, y + 11, "â”€" * (w - 4), c['w'])
+    at(x + 2, y + 11, "─" * (w - 4), c['w'])
     at(x + 2, y + 12, f"send {a:.6f} oct", c['B'] + c['g'])
     at(x + 2, y + 13, f"to:  {to}", c['g'])
     at(x + 2, y + 14, f"fee: {'0.001' if a < 1000 else '0.003'} oct (nonce: {n + 1})", c['y'])
@@ -381,7 +381,7 @@ async def tx():
     if ok:
         for i in range(16, 21):
             at(x + 2, y + i, " " * (w - 4), c['bg'])
-        at(x + 2, y + 16, f"âœ“ transaction accepted!", c['bgg'] + c['w'])
+        at(x + 2, y + 16, f"✓ transaction accepted!", c['bgg'] + c['w'])
         at(x + 2, y + 17, f"hash: {hs[:64]}...", c['g'])
         at(x + 2, y + 18, f"      {hs[64:]}", c['g'])
         at(x + 2, y + 19, f"time: {dt:.2f}s", c['w'])
@@ -397,7 +397,7 @@ async def tx():
         })
         lu = 0
     else:
-        at(x + 2, y + 16, f"âœ— transaction failed!", c['bgr'] + c['w'])
+        at(x + 2, y + 16, f"✗ transaction failed!", c['bgr'] + c['w'])
         at(x + 2, y + 17, f"error: {str(hs)[:w - 10]}", c['R'])
     await awaitkey()
 
@@ -411,7 +411,7 @@ async def multi():
     box(x, y, w, hb, "multi send")
     at(x + 2, y + 2, "enter recipients (address amount), empty line to finish:", c['y'])
     at(x + 2, y + 3, "type [esc] to cancel", c['c'])
-    at(x + 2, y + 4, "â”€" * (w - 4), c['w'])
+    at(x + 2, y + 4, "─" * (w - 4), c['w'])
     rcp = []
     tot = 0
     ly = y + 5
@@ -427,13 +427,13 @@ async def multi():
             a = float(p[1])
             rcp.append((p[0], a))
             tot += a
-            at(x + 1000, ly, f"+{a:.6f}", c['g'])
+            at(x + 50, ly, f"+{a:.6f}", c['g'])
             ly += 1
         else:
-            at(x + 1000, ly, "invalid!", c['R'])
+            at(x + 50, ly, "invalid!", c['R'])
     if not rcp:
         return
-    at(x + 2, y + hb - 7, "â”€" * (w - 4), c['w'])
+    at(x + 2, y + hb - 7, "─" * (w - 4), c['w'])
     at(x + 2, y + hb - 6, f"total: {tot:.6f} oct to {len(rcp)} addresses", c['B'] + c['y'])
     global lu
     lu = 0
@@ -472,12 +472,12 @@ async def multi():
             idx = batch_idx * batch_size + i
             if isinstance(result, Exception):
                 f_total += 1
-                at(x + 55, y + hb - 2, "âœ— fail ", c['R'])
+                at(x + 55, y + hb - 2, "✗ fail ", c['R'])
             else:
                 ok, hs, _, _ = result
                 if ok:
                     s_total += 1
-                    at(x + 55, y + hb - 2, "âœ“ ok   ", c['g'])
+                    at(x + 55, y + hb - 2, "✓ ok   ", c['g'])
                     h.append({
                         'time': datetime.now(),
                         'hash': hs,
@@ -488,7 +488,7 @@ async def multi():
                     })
                 else:
                     f_total += 1
-                    at(x + 55, y + hb - 2, "âœ— fail ", c['R'])
+                    at(x + 55, y + hb - 2, "✗ fail ", c['R'])
             at(x + 2, y + hb - 2, f"[{idx + 1}/{len(rcp)}] {a:.6f} to {to[:20]}...", c['c'])
             await asyncio.sleep(0.05)
     
@@ -564,13 +564,13 @@ async def send_to_list():
         return
     
     if b < total_required:
-        at(x + 2, y + 11, "â”€" * (w - 4), c['w'])
+        at(x + 2, y + 11, "─" * (w - 4), c['w'])
         at(x + 2, y + 12, f"insufficient balance! ({b:.6f} < {total_required:.6f})", c['bgr'] + c['w'])
         at(x + 2, y + 13, "press enter to go back...", c['y'])
         await ainp(x + 2, y + 14)
         return
     
-    at(x + 2, y + 11, "â”€" * (w - 4), c['w'])
+    at(x + 2, y + 11, "─" * (w - 4), c['w'])
     at(x + 2, y + 12, f"your balance: {b:.6f} OCT", c['g'])
     at(x + 2, y + 13, f"nonce: {n + 1}", c['g'])
     
@@ -599,12 +599,12 @@ async def send_to_list():
             idx = batch_idx * batch_size + i
             if isinstance(result, Exception):
                 f_total += 1
-                at(x + 550, y + 18, "âœ— fail ", c['R'])
+                at(x + 550, y + 18, "✗ fail ", c['R'])
             else:
                 ok, hs, _, _ = result
                 if ok:
                     s_total += 1
-                    at(x + 550, y + 18, "âœ“ ok   ", c['g'])
+                    at(x + 550, y + 18, "✓ ok   ", c['g'])
                     h.append({
                         'time': datetime.now(),
                         'hash': hs,
@@ -615,7 +615,7 @@ async def send_to_list():
                     })
                 else:
                     f_total += 1
-                    at(x + 55, y + 18, "âœ— fail ", c['R'])
+                    at(x + 55, y + 18, "✗ fail ", c['R'])
             at(x + 2, y + 18, f"[{idx + 1}/{len(valid_addresses)}] sent 1 OCT to {addr[:20]}...", c['c'])
             await asyncio.sleep(0.5)
     
