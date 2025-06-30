@@ -82,7 +82,7 @@ total required: 123.456789 OCT
 completed: 118 success, 2 failed
 ```
 
- ##🛠️ Teknologi Dibawah Hood
+ ## 🛠️ Teknologi Dibawah Hood
 
 - **Asynchronous** I/O dengan `aiohttp` untuk kinerja maksimal
 - **Kriptografi** menggunakan `nacl.signing` untuk keamanan transaksi
