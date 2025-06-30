@@ -141,7 +141,7 @@ async def st():
         if s2 == 200 and j2:
             our = [tx for tx in j2.get('staged_transactions', []) if tx.get('from') == addr]
             if our:
-                cn = max(cn, max(int(tx.get('nonce', 0)) for tx in our))
+                cn = max(cn, max(int(tx.get('nonce', 0)) for tx in our)
     elif s == 404:
         cn, cb, lu = 0, 0.0, now
     elif s == 200 and t and not j:
@@ -231,29 +231,31 @@ async def snd(tx):
     return False, json.dumps(j) if j else t, dt, j
 
 async def expl(x, y, w, hb):
-    box(x, y, w, hb, "wallet explorer")
+    at(x, y, "TRANSACTION HISTORY", c['B'] + c['c'])
+    at(x, y + 1, "─" * 19, c['c'])
+    y_offset = y + 2
+    
+    at(x + 2, y_offset, "address:", c['c'])
+    at(x + 11, y_offset, addr, c['w'])
+    at(x + 2, y_offset + 1, "balance:", c['c'])
     n, b = await st()
-    await gh()
-    at(x + 2, y + 2, "address:", c['c'])
-    at(x + 11, y + 2, addr, c['w'])
-    at(x + 2, y + 3, "balance:", c['c'])
-    at(x + 11, y + 3, f"{b:.6f} oct" if b is not None else "---", c['B'] + c['g'] if b else c['w'])
-    at(x + 2, y + 4, "nonce:  ", c['c'])
-    at(x + 11, y + 4, str(n) if n is not None else "---", c['w'])
-    at(x + 2, y + 5, "public: ", c['c'])
-    at(x + 11, y + 5, pub, c['w'])
+    at(x + 11, y_offset + 1, f"{b:.6f} oct" if b is not None else "---", c['B'] + c['g'] if b else c['w'])
+    at(x + 2, y_offset + 2, "nonce:  ", c['c'])
+    at(x + 11, y_offset + 2, str(n) if n is not None else "---", c['w'])
+    at(x + 2, y_offset + 3, "public: ", c['c'])
+    at(x + 11, y_offset + 3, pub, c['w'])
     _, _, j = await req('GET', '/staging', 2)
     sc = len([tx for tx in j.get('staged_transactions', []) if tx.get('from') == addr]) if j else 0
-    at(x + 2, y + 6, "staging:", c['c'])
-    at(x + 11, y + 6, f"{sc} pending" if sc else "none", c['y'] if sc else c['w'])
-    at(x + 1, y + 7, "─" * (w - 2), c['w'])
+    at(x + 2, y_offset + 4, "staging:", c['c'])
+    at(x + 11, y_offset + 4, f"{sc} pending" if sc else "none", c['y'] if sc else c['w'])
+    at(x + 1, y_offset + 5, "─" * (w - 2), c['w'])
     
-    at(x + 2, y + 8, "recent transactions:", c['B'] + c['c'])
+    at(x + 2, y_offset + 6, "recent transactions:", c['B'] + c['c'])
     if not h:
-        at(x + 2, y + 10, "no transactions yet", c['y'])
+        at(x + 2, y_offset + 8, "no transactions yet", c['y'])
     else:
-        at(x + 2, y + 10, "time     type  amount      address", c['c'])
-        at(x + 2, y + 11, "─" * (w - 4), c['w'])
+        at(x + 2, y_offset + 8, "time     type  amount      address", c['c'])
+        at(x + 2, y_offset + 9, "─" * (w - 4), c['w'])
         seen_hashes = set()
         display_count = 0
         # Sort by time descending (newest first)
@@ -267,54 +269,59 @@ async def expl(x, y, w, hb):
             is_pending = not tx.get('epoch')
             # Highlight pending transactions
             time_color = c['y'] if is_pending else c['w']
-            at(x + 2, y + 12 + display_count, tx['time'].strftime('%H:%M:%S'), time_color)
-            at(x + 11, y + 12 + display_count, " in" if tx['type'] == 'in' else "out", c['g'] if tx['type'] == 'in' else c['R'])
-            at(x + 16, y + 12 + display_count, f"{float(tx['amt']):>10.6f}", c['w'])
-            at(x + 28, y + 12 + display_count, str(tx.get('to', '---')), c['y'])
+            at(x + 2, y_offset + 10 + display_count, tx['time'].strftime('%H:%M:%S'), time_color)
+            at(x + 11, y_offset + 10 + display_count, " in" if tx['type'] == 'in' else "out", c['g'] if tx['type'] == 'in' else c['R'])
+            at(x + 16, y_offset + 10 + display_count, f"{float(tx['amt']):>10.6f}", c['w'])
+            at(x + 28, y_offset + 10 + display_count, str(tx.get('to', '---')), c['y'])
             # Highlight pending status
             status_text = "pen" if is_pending else f"e{tx.get('epoch', 0)}"
             status_color = c['y'] + c['B'] if is_pending else c['c']
-            at(x + w - 6, y + 12 + display_count, status_text, status_color)
+            at(x + w - 6, y_offset + 10 + display_count, status_text, status_color)
             display_count += 1
 
 def menu(x, y, w, h):
-    box(x, y, w, h, "commands")
-    at(x + 2, y + 3, "[1] send tx", c['w'])
-    at(x + 2, y + 5, "[2] refresh balance", c['w'])
-    at(x + 2, y + 7, "[3] multi send", c['w'])
-    at(x + 2, y + 9, "[4] export keys", c['w'])
-    at(x + 2, y + 11, "[5] clear hist", c['w'])
-    at(x + 2, y + 13, "[6] send 1 OCT to list", c['w'])  # NEW FEATURE ADDED HERE
-    at(x + 2, y + 15, "[0] exit", c['w'])
-    at(x + 2, y + h - 2, "command: ", c['B'] + c['y'])
+    at(x, y, "COMMANDS", c['B'] + c['c'])
+    at(x, y + 1, "────────", c['c'])
+    at(x, y + 3, "[1] send tx", c['w'])
+    at(x, y + 5, "[2] refresh balance", c['w'])
+    at(x, y + 7, "[3] multi send", c['w'])
+    at(x, y + 9, "[4] export keys", c['w'])
+    at(x, y + 11, "[5] clear history", c['w'])
+    at(x, y + 13, "[6] send to list", c['w'])
+    at(x, y + 15, "[0] exit", c['w'])
+    at(x, y + 17, "─" * (w - 2), c['c'])
+    at(x, y + 18, "select option: ", c['B'] + c['y'])
 
 async def scr():
     cr = sz()
     cls()
     fill()
-    t = f" octra pre-client v0.0.12 (dev) │ {datetime.now().strftime('%H:%M:%S')} "
-    at((cr[0] - len(t)) // 2, 1, t, c['B'] + c['w'])
+    # Header with subtle coloring
+    t = f" octra wallet v0.0.12 │ {datetime.now().strftime('%H:%M:%S')} "
+    at((cr[0] - len(t)) // 2, 1, t, c['B'] + c['c'])
+    at(1, 2, "─" * cr[0], c['c'])
     
     sidebar_w = 28
-    menu(2, 3, sidebar_w, 19)  # Increased height to accommodate new option
     
-    # info box
-    info_y = 23  # Adjusted position
-    box(2, info_y, sidebar_w, 9)
-    at(4, info_y + 2, "testnet environment.", c['y'])
-    at(4, info_y + 3, "actively updated.", c['y'])
-    at(4, info_y + 4, "monitor changes!", c['y'])
-    at(4, info_y + 5, "", c['y'])
-    at(4, info_y + 6, "testnet tokens have", c['y'])
-    at(4, info_y + 7, "no commercial value.", c['y'])
+    # Menu section with cleaner layout
+    menu(2, 4, sidebar_w, 19)
     
+    # Information panel with cleaner design
+    info_y = 23
+    at(2, info_y, "INFORMATION", c['B'] + c['c'])
+    at(2, info_y + 1, "───────────", c['c'])
+    at(4, info_y + 3, "testnet environment", c['y'])
+    at(4, info_y + 4, "tokens have no value", c['y'])
+    at(4, info_y + 5, "use for testing only", c['y'])
+    
+    # Explorer section with cleaner layout
     explorer_x = sidebar_w + 4
     explorer_w = cr[0] - explorer_x - 2
-    await expl(explorer_x, 3, explorer_w, cr[1] - 6)
+    await expl(explorer_x, 4, explorer_w, cr[1] - 6)
     
-    at(2, cr[1] - 1, " " * (cr[0] - 4), c['bg'])
-    at(2, cr[1] - 1, "ready", c['bgg'] + c['w'])
-    return await ainp(13, 20)  # Adjusted input position
+    # Status bar
+    at(2, cr[1] - 1, " ready ", c['g'])
+    return await ainp(18, 21)
 
 async def tx():
     cr = sz()
@@ -503,7 +510,6 @@ async def multi():
     at(x + 2, y + hb - 2, f"completed: {s_total} success, {f_total} failed", c['bgg'] + c['w'] if f_total == 0 else c['bgr'] + c['w'])
     await awaitkey()
 
-# NEW FEATURE: SEND 1 OCT TO ADDRESSES IN LIST.TXT
 async def send_to_list():
     cr = sz()
     cls()
@@ -741,7 +747,7 @@ async def main():
             elif cmd == '5':
                 h.clear()
                 lh = 0
-            elif cmd == '6':  # NEW FEATURE HANDLER
+            elif cmd == '6':
                 await send_to_list()
             elif cmd in ['0', 'q', '']:
                 break
