@@ -141,7 +141,8 @@ async def st():
         if s2 == 200 and j2:
             our = [tx for tx in j2.get('staged_transactions', []) if tx.get('from') == addr]
             if our:
-                cn = max(cn, max(int(tx.get('nonce', 0)) for tx in our)
+                # PERBAIKAN DI SINI: TAMBAHKAN TANDA KURUNG PENUTUP
+                cn = max(cn, max(int(tx.get('nonce', 0) for tx in our))
     elif s == 404:
         cn, cb, lu = 0, 0.0, now
     elif s == 200 and t and not j:
@@ -178,7 +179,7 @@ async def gh():
                 continue
             s2, _, j2 = result
             if s2 == 200 and j2 and 'parsed_tx' in j2:
-                p = j2['parsed_tx']  # FIXED: Corrected variable name here
+                p = j2['parsed_tx']
                 tx_hash = ref['hash']
                 
                 if tx_hash in existing_hashes:
@@ -814,7 +815,7 @@ async def fetch_oct_addresses_screen():
     # Display results
     if isinstance(result, int):
         at(x + 2, y + 4, f"✓ found {result} valid addresses", c['g'])
-        at(x + 2, y + 5, f"saved to list.txt", c['g'])
+        at(x + 极2, y + 5, f"saved to list.txt", c['g'])
     else:
         at(x + 2, y + 4, result, c['R'])
     
