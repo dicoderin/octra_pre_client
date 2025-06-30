@@ -288,9 +288,86 @@ def menu(x, y, w, h):
     at(x, y + 9, "[4] export keys", c['w'])
     at(x, y + 11, "[5] clear history", c['w'])
     at(x, y + 13, "[6] send to list", c['w'])
-    at(x, y + 15, "[0] exit", c['w'])
-    at(x, y + 17, "─" * (w - 2), c['c'])
-    at(x, y + 18, "select option: ", c['B'] + c['y'])
+    at(x, y + 15, "[7] fetch oct addresses", c['w'])
+    at(x, y + 17, "[8] clear wallet list", c['w'])  # New option
+    at(x, y + 19, "[0] exit", c['w'])
+    at(x, y + 21, "─" * (w - 2), c['c'])
+    at(x, y + 22, "select option: ", c['B'] + c['y'])
+
+async def clear_wallet_list():
+    """Clear all addresses from list.txt"""
+    cr = sz()
+    w, hb = 70, 10
+    x = (cr[0] - w) // 2
+    y = (cr[1] - hb) // 2
+    box(x, y, w, hb, "clear wallet list")
+    
+    at(x + 2, y + 2, "this will remove all addresses from list.txt", c['y'])
+    at(x + 2, y + 3, "are you sure? [y/n]: ", c['B'] + c['y'])
+    confirm = await ainp(x + 25, y + 3)
+    
+    if confirm.strip().lower() == 'y':
+        try:
+            # Clear the file by opening in write mode and closing immediately
+            with open('list.txt', 'w') as f:
+                pass
+            at(x + 2, y + 5, "list.txt has been cleared.", c['g'])
+        except Exception as e:
+            at(x + 2, y + 5, f"error: {str(e)}", c['R'])
+    else:
+        at(x + 2, y + 5, "operation canceled.", c['y'])
+    
+    at(x + 2, y + 7, "press enter to continue...", c['y'])
+    await awaitkey()
+
+async def fetch_oct_addresses():
+    """Fetch oct addresses from API and save to list.txt"""
+    cr = sz()
+    w, hb = 70, 10
+    x = (cr[0] - w) // 2
+    y = (cr[1] - hb) // 2
+    box(x, y, w, hb, "fetch oct addresses")
+    
+    # Create spinner animation
+    spin_task = asyncio.create_task(spin_animation(x + 2, y + 3, "fetching addresses..."))
+    
+    try:
+        # Make API request
+        api_url = "https://octrascan.io/api/txs?offset=100"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(api_url) as response:
+                if response.status != 200:
+                    raise Exception(f"API error: {response.status}")
+                
+                data = await response.json()
+                addresses = set()
+                
+                # Extract addresses from transactions
+                for tx in data.get('transactions', []):
+                    if tx.get('from', '').startswith('oct'):
+                        addresses.add(tx['from'])
+                    if tx.get('to', '').startswith('oct'):
+                        addresses.add(tx['to'])
+                
+                # Filter valid addresses
+                valid_addresses = [addr for addr in addresses if b58.match(addr)]
+                
+                # Save to file
+                with open('list.txt', 'w') as f:
+                    for addr in valid_addresses:
+                        f.write(addr + '\n')
+                
+                return len(valid_addresses)
+    
+    except Exception as e:
+        return f"Error: {str(e)}"
+    
+    finally:
+        spin_task.cancel()
+        try:
+            await spin_task
+        except asyncio.CancelledError:
+            pass
 
 async def scr():
     cr = sz()
@@ -304,10 +381,10 @@ async def scr():
     sidebar_w = 28
     
     # Menu section with cleaner layout
-    menu(2, 4, sidebar_w, 19)
+    menu(2, 4, sidebar_w, 23)  # Adjusted height
     
     # Information panel with cleaner design
-    info_y = 23
+    info_y = 28  # Adjusted position
     at(2, info_y, "INFORMATION", c['B'] + c['c'])
     at(2, info_y + 1, "───────────", c['c'])
     at(4, info_y + 3, "testnet environment", c['y'])
@@ -321,7 +398,7 @@ async def scr():
     
     # Status bar
     at(2, cr[1] - 1, " ready ", c['g'])
-    return await ainp(18, 21)
+    return await ainp(18, 25)  # Adjusted input position
 
 async def tx():
     cr = sz()
@@ -719,6 +796,31 @@ async def exp():
         at(x + 2, y + 11, " " * (w - 4), c['bg'])
         await awaitkey()
 
+async def fetch_oct_addresses_screen():
+    """Display screen for fetching oct addresses"""
+    cr = sz()
+    cls()
+    fill()
+    w, hb = 70, 10
+    x = (cr[0] - w) // 2
+    y = (cr[1] - hb) // 2
+    box(x, y, w, hb, "fetch oct addresses")
+    
+    at(x + 2, y + 2, "fetching addresses from octrascan.io...", c['y'])
+    
+    # Run fetch operation
+    result = await fetch_oct_addresses()
+    
+    # Display results
+    if isinstance(result, int):
+        at(x + 2, y + 4, f"✓ found {result} valid addresses", c['g'])
+        at(x + 2, y + 5, f"saved to list.txt", c['g'])
+    else:
+        at(x + 2, y + 4, result, c['R'])
+    
+    at(x + 2, y + 7, "press enter to continue...", c['y'])
+    await awaitkey()
+
 async def main():
     global session
     
@@ -749,6 +851,10 @@ async def main():
                 lh = 0
             elif cmd == '6':
                 await send_to_list()
+            elif cmd == '7':
+                await fetch_oct_addresses_screen()
+            elif cmd == '8':  # New option handler for clearing wallet list
+                await clear_wallet_list()
             elif cmd in ['0', 'q', '']:
                 break
     except:
