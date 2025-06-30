@@ -69,7 +69,7 @@ def ld():
             d = json.load(f)
         priv = d.get('priv')
         addr = d.get('addr')
-        rpc = d.get('rpc', 'https://octra.network')
+        r极 = d.get('rpc', 'https://octra.network')
         sk = nacl.signing.SigningKey(base64.b64decode(priv))
         pub = base64.b64encode(sk.verify_key.encode()).decode()
         return True
@@ -320,32 +320,79 @@ async def clear_wallet_list():
     await awaitkey()
 
 async def fetch_oct_addresses():
-    api_url = "https://octrascan.io/api/txs?offset=100"
+    """Fetch oct addresses from API and save to list.txt"""
     try:
+        api_url = "https://octrascan.io/api/txs?offset=100"
         async with aiohttp.ClientSession() as session:
             async with session.get(api_url) as response:
                 if response.status != 200:
-                    raise Exception(f"API error: {response.status}")
+                    return f"API error: HTTP {response.status}"
                 
                 data = await response.json()
                 addresses = set()
                 
+                # Extract addresses from transactions with better validation
                 for tx in data.get('transactions', []):
-                    if tx.get('from', '').startswith('oct'):
-                        addresses.add(tx['from'])
-                    if tx.get('to', '').startswith('oct'):
-                        addresses.add(tx['to'])
+                    # Handle both 'from' and 'to' addresses
+                    for field in ['from', 'to']:
+                        addr_val = tx.get(field)
+                        if addr_val and b58.match(addr_val):
+                            addresses.add(addr_val)
                 
-                valid_addresses = [addr for addr in addresses if b58.match(addr)]
+                # Filter valid addresses
+                valid_addresses = list(addresses)
                 
+                # Save to file
                 with open('list.txt', 'w') as f:
                     for addr in valid_addresses:
                         f.write(addr + '\n')
                 
                 return len(valid_addresses)
     
+    except aiohttp.ClientError as e:
+        return f"Network error: {str(e)}"
+    except json.JSONDecodeError:
+        return "Invalid API response format"
     except Exception as e:
-        return f"Error: {str(e)}"
+        return f"Unexpected error: {str(e)}"
+
+async def fetch_oct_addresses_screen():
+    """Display screen for fetching oct addresses"""
+    cr = sz()
+    cls()
+    fill()
+    w, hb = 70, 12  # Increased height for better message display
+    x = (cr[0] - w) // 2
+    y = (cr[1] - hb) // 2
+    box(x, y, w, hb, "fetch oct addresses")
+    
+    # Create spinner animation
+    spin_task = asyncio.create_task(spin_animation(x + 2, y + 3, "fetching addresses from octrascan.io..."))
+    
+    # Run fetch operation
+    result = await fetch_oct_addresses()
+    
+    # Cancel spinner
+    spin_task.cancel()
+    try:
+        await spin_task
+    except asyncio.CancelledError:
+        pass
+    
+    # Display results
+    if isinstance(result, int):
+        if result > 0:
+            at(x + 2, y + 4, f"✓ Found {result} valid OCT addresses", c['g'])
+            at(x + 2, y + 5, "Saved to list.txt", c['g'])
+        else:
+            at(x + 2, y + 4, "No valid addresses found in recent transactions", c['y'])
+            at(x + 2, y + 5, "Try increasing the offset parameter", c['y'])
+    else:
+        at(x + 2, y + 4, "✗ Failed to fetch addresses:", c['R'])
+        at(x + 2, y + 5, result, c['R'])
+    
+    at(x + 2, y + 7, "Press enter to continue...", c['y'])
+    await awaitkey()
 
 async def scr():
     cr = sz()
@@ -382,7 +429,7 @@ async def tx():
     box(x, y, w, hb, "send transaction")
     at(x + 2, y + 2, "to address: (or [esc] to cancel)", c['y'])
     at(x + 2, y + 3, "─" * (w - 4), c['w'])
-    to = await ain极(x + 2, y + 4)
+    to = await ainp(x + 2, y + 4)
     if not to or to.lower() == 'esc':
         return
     if not b58.match(to):
@@ -398,7 +445,7 @@ async def tx():
         return
     if not re.match(r"^\d+(\.\d+)?$", a) or float(a) <= 0:
         at(x + 2, y + 14, "invalid amount!", c['bgr'] + c['w'])
-        at(x + 2, y + 极15, "press enter to go back...", c['y'])
+        at(x + 2, y + 15, "press enter to go back...", c['y'])
         await ainp(x + 2, y + 16)
         return
     a = float(a)
@@ -420,7 +467,7 @@ async def tx():
     at(x + 2, y + 13, f"to:  {to}", c['g'])
     at(x + 2, y + 14, f"fee: {'0.001' if a < 1000 else '0.003'} oct (nonce: {n + 1})", c['y'])
     at(x + 2, y + 15, "[y]es / [n]o: ", c['B'] + c['y'])
-    if (await ainp(x + 16, y + 15)).strip().lower() != 'y':
+    if (await ainp(x + 16, y + 15)).strip().lower() != '极y':
         return
     
     spin_task = asyncio.create_task(spin_animation(x + 2, y + 16, "sending transaction"))
@@ -761,28 +808,6 @@ async def exp():
             at(x + 2, y + 9, "clipboard not available", c['R'])
         at(x + 2, y + 11, " " * (w - 4), c['bg'])
         await awaitkey()
-
-async def fetch_oct_addresses_screen():
-    cr = sz()
-    cls()
-    fill()
-    w, hb = 70, 10
-    x = (cr[0] - w) // 2
-    y = (cr[1] - hb) // 2
-    box(x, y, w, hb, "fetch oct addresses")
-    
-    at(x + 2, y + 2, "fetching addresses from octrascan.io...", c['y'])
-    
-    result = await fetch_oct_addresses()
-    
-    if isinstance(result, int):
-        at(x + 2, y + 4, f"✓ found {result} valid addresses", c['g'])
-        at(x + 2, y + 5, f"saved to list.txt", c['g'])
-    else:
-        at(x + 2, y + 4, result, c['R'])
-    
-    at(x + 2, y + 7, "press enter to continue...", c['y'])
-    await awaitkey()
 
 async def main():
     global session
