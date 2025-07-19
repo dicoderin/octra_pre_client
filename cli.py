@@ -584,7 +584,9 @@ def menu(x, y, w, h):
     at(x + 2, y + 8, "[7] claim transfers", c['w'])
     at(x + 2, y + 9, "[8] export keys", c['w'])
     at(x + 2, y + 10, "[9] clear hist", c['w'])
-    at(x + 2, y + 11, "[0] exit", c['w'])
+    at(x + 2, y + 11, "[S] stake", c['w'])
+    at(x + 2, y + 12, "[D] deploy contract", c['w'])
+    at(x + 2, y + 13, "[0] exit", c['w'])
     at(x + 2, y + h - 2, "command: ", c['B'] + c['y'])
 
 async def scr():
@@ -595,9 +597,9 @@ async def scr():
     at((cr[0] - len(t)) // 2, 1, t, c['B'] + c['w'])
     
     sidebar_w = 28
-    menu(2, 3, sidebar_w, 15)
+    menu(2, 3, sidebar_w, 17)
     
-    info_y = 19
+    info_y = 21
     box(2, info_y, sidebar_w, 11)
     at(4, info_y + 2, "testnet environment.", c['y'])
     at(4, info_y + 3, "actively updated.", c['y'])
@@ -614,7 +616,7 @@ async def scr():
     
     at(2, cr[1] - 1, " " * (cr[0] - 4), c['bg'])
     at(2, cr[1] - 1, "ready", c['bgg'] + c['w'])
-    return await ainp(12, 16)
+    return await ainp(12, 18)
 
 async def tx():
     cr = sz()
@@ -1223,6 +1225,226 @@ async def exp():
         at(x + 2, y + 11, " " * (w - 4), c['bg'])
         await awaitkey()
 
+# ===================== NEW STAKE FEATURE =====================
+async def stake_ui():
+    cr = sz()
+    cls()
+    fill()
+    w, hb = 80, 25
+    x = (cr[0] - w) // 2
+    y = (cr[1] - hb) // 2
+    
+    box(x, y, w, hb, "staking")
+    
+    # Get current staking info
+    s, t, j = await req('GET', f'/staking/{addr}')
+    if s != 200 or not j:
+        at(x + 2, y + 10, "failed to get staking info", c['R'])
+        await awaitkey()
+        return
+    
+    staked = float(j.get('staked', 0))
+    rewards = float(j.get('rewards', 0))
+    min_stake = float(j.get('min_stake', 1))
+    
+    n, b = await st()
+    
+    at(x + 2, y + 2, "current balance:", c['c'])
+    at(x + 20, y + 2, f"{b:.6f} oct", c['w'])
+    
+    at(x + 2, y + 3, "staked amount:", c['c'])
+    at(x + 20, y + 3, f"{staked:.6f} oct", c['g'])
+    
+    at(x + 2, y + 4, "pending rewards:", c['c'])
+    at(x + 20, y + 4, f"{rewards:.6f} oct", c['y'])
+    
+    at(x + 2, y + 5, "minimum stake:", c['c'])
+    at(x + 20, y + 5, f"{min_stake:.6f} oct", c['w'])
+    
+    at(x + 2, y + 7, "─" * (w - 4), c['w'])
+    
+    at(x + 2, y + 9, "[1] Stake", c['w'])
+    at(x + 2, y + 10, "[2] Unstake", c['w'])
+    at(x + 2, y + 11, "[3] Claim rewards", c['w'])
+    at(x + 2, y + 12, "[0] Back", c['w'])
+    
+    at(x + 2, y + 14, "choice: ", c['B'] + c['y'])
+    choice = await ainp(x + 10, y + 14)
+    
+    if choice == '1':  # Stake
+        at(x + 2, y + 16, "amount to stake:", c['y'])
+        amount = await ainp(x + 20, y + 16)
+        
+        if not amount or not re.match(r"^\d+(\.\d+)?$", amount) or float(amount) <= 0:
+            return
+        
+        amount = float(amount)
+        if amount > b:
+            at(x + 2, y + 18, "insufficient balance", c['R'])
+            await awaitkey()
+            return
+        if amount < min_stake:
+            at(x + 2, y + 18, f"minimum stake is {min_stake:.6f}", c['R'])
+            await awaitkey()
+            return
+            
+        data = {
+            "from": addr,
+            "amount": str(int(amount * μ)),
+            "private_key": priv
+        }
+        
+        spin_task = asyncio.create_task(spin_animation(x + 2, y + 18, "staking..."))
+        s, t, j = await req('POST', '/staking/stake', data)
+        spin_task.cancel()
+        
+        if s == 200:
+            at(x + 2, y + 18, "✓ stake successful!", c['bgg'] + c['w'])
+            at(x + 2, y + 19, f"tx hash: {j.get('tx_hash', 'unknown')[:50]}...", c['g'])
+        else:
+            at(x + 2, y + 18, f"✗ error: {j.get('error', t) if j else t}", c['bgr'] + c['w'])
+        await awaitkey()
+        
+    elif choice == '2':  # Unstake
+        if staked <= 0:
+            at(x + 2, y + 16, "no staked amount to withdraw", c['R'])
+            await awaitkey()
+            return
+            
+        at(x + 2, y + 16, "amount to unstake:", c['y'])
+        amount = await ainp(x + 20, y + 16)
+        
+        if not amount or not re.match(r"^\d+(\.\d+)?$", amount) or float(amount) <= 0:
+            return
+        
+        amount = float(amount)
+        if amount > staked:
+            at(x + 2, y + 18, "cannot unstake more than staked", c['R'])
+            await awaitkey()
+            return
+            
+        data = {
+            "from": addr,
+            "amount": str(int(amount * μ)),
+            "private_key": priv
+        }
+        
+        spin_task = asyncio.create_task(spin_animation(x + 2, y + 18, "unstaking..."))
+        s, t, j = await req('POST', '/staking/unstake', data)
+        spin_task.cancel()
+        
+        if s == 200:
+            at(x + 2, y + 18, "✓ unstake successful!", c['bgg'] + c['w'])
+            at(x + 2, y + 19, f"tx hash: {j.get('tx_hash', 'unknown')[:50]}...", c['g'])
+        else:
+            at(x + 2, y + 18, f"✗ error: {j.get('error', t) if j else t}", c['bgr'] + c['w'])
+        await awaitkey()
+        
+    elif choice == '3':  # Claim rewards
+        if rewards <= 0:
+            at(x + 2, y + 16, "no rewards to claim", c['R'])
+            await awaitkey()
+            return
+            
+        data = {
+            "from": addr,
+            "private_key": priv
+        }
+        
+        spin_task = asyncio.create_task(spin_animation(x + 2, y + 16, "claiming rewards..."))
+        s, t, j = await req('POST', '/staking/claim', data)
+        spin_task.cancel()
+        
+        if s == 200:
+            at(x + 2, y + 16, "✓ rewards claimed!", c['bgg'] + c['w'])
+            at(x + 2, y + 17, f"tx hash: {j.get('tx_hash', 'unknown')[:50]}...", c['g'])
+        else:
+            at(x + 2, y + 16, f"✗ error: {j.get('error', t) if j else t}", c['bgr'] + c['w'])
+        await awaitkey()
+
+# ===================== NEW DEPLOY CONTRACT FEATURE =====================
+async def deploy_contract_ui():
+    cr = sz()
+    cls()
+    fill()
+    w, hb = 80, 25
+    x = (cr[0] - w) // 2
+    y = (cr[1] - hb) // 2
+    
+    box(x, y, w, hb, "deploy smart contract")
+    
+    n, b = await st()
+    if b is None:
+        at(x + 2, y + 10, "failed to get balance", c['R'])
+        await awaitkey()
+        return
+    
+    at(x + 2, y + 2, "current balance:", c['c'])
+    at(x + 20, y + 2, f"{b:.6f} oct", c['w'])
+    
+    at(x + 2, y + 3, "deployment fee:", c['c'])
+    at(x + 20, y + 3, "0.1 oct", c['y'])
+    
+    at(x + 2, y + 5, "contract code:", c['y'])
+    at(x + 2, y + 6, "─" * (w - 4), c['w'])
+    
+    code_lines = []
+    at(x + 2, y + 7, "enter contract code line by line", c['c'])
+    at(x + 2, y + 8, "type 'END' on a new line to finish", c['c'])
+    
+    ly = y + 9
+    while ly < y + hb - 8:
+        line = await ainp(x + 2, ly)
+        if line.strip().upper() == 'END':
+            break
+        code_lines.append(line)
+        ly += 1
+    
+    if not code_lines:
+        at(x + 2, y + hb - 5, "no code entered", c['R'])
+        await awaitkey()
+        return
+    
+    contract_code = "\n".join(code_lines)
+    
+    at(x + 2, y + hb - 7, "initial funding (optional):", c['y'])
+    funding = await ainp(x + 30, y + hb - 7)
+    
+    funding_amount = 0.0
+    if funding:
+        if not re.match(r"^\d+(\.\d+)?$", funding) or float(funding) < 0:
+            at(x + 2, y + hb - 5, "invalid funding amount", c['R'])
+            await awaitkey()
+            return
+        funding_amount = float(funding)
+        if funding_amount > b - 0.1:
+            at(x + 2, y + hb - 5, "insufficient balance for funding + fee", c['R'])
+            await awaitkey()
+            return
+    
+    at(x + 2, y + hb - 5, f"deploy contract with {funding_amount:.6f} OCT funding? [y/n]:", c['B'] + c['y'])
+    if (await ainp(x + 60, y + hb - 5)).strip().lower() != 'y':
+        return
+    
+    data = {
+        "from": addr,
+        "code": contract_code,
+        "funding": str(int(funding_amount * μ)),
+        "private_key": priv
+    }
+    
+    spin_task = asyncio.create_task(spin_animation(x + 2, y + hb - 3, "deploying contract..."))
+    s, t, j = await req('POST', '/contracts/deploy', data)
+    spin_task.cancel()
+    
+    if s == 200:
+        at(x + 2, y + hb - 3, "✓ contract deployed!", c['bgg'] + c['w'])
+        at(x + 2, y + hb - 2, f"contract address: {j.get('contract_address', 'unknown')}", c['g'])
+        at(x + 2, y + hb - 1, f"tx hash: {j.get('tx_hash', 'unknown')[:50]}...", c['g'])
+    else:
+        at(x + 2, y + hb - 3, f"✗ error: {j.get('error', t) if j else t}", c['bgr'] + c['w'])
+    await awaitkey()
+
 def signal_handler(sig, frame):
     stop_flag.set()
     if session:
@@ -1269,6 +1491,10 @@ async def main():
             elif cmd == '9':
                 h.clear()
                 lh = 0
+            elif cmd.lower() == 's':  # Stake
+                await stake_ui()
+            elif cmd.lower() == 'd':  # Deploy contract
+                await deploy_contract_ui()
             elif cmd in ['0', 'q', '']:
                 break
     except Exception:
