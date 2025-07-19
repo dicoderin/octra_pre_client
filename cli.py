@@ -23,6 +23,9 @@ stop_flag = threading.Event()
 spinner_frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
 spinner_idx = 0
 
+# Validator contract address
+VALIDATOR_CONTRACT = "oct7xCozDD9JEsbeVpo5C7HXp2BJbKqfmNUHmDDCCTtWcGb"
+
 def cls():
     os.system('cls' if os.name == 'nt' else 'clear')
 
@@ -446,7 +449,7 @@ async def gh():
         existing_hashes = {tx['hash'] for tx in h}
         nh = []
         
-        for i, (ref, result) in enumerate(zip(j.get('recent_transactions', []), tx_results)):
+        for i, (ref, result) in enumerate(zip(j.get('recent_transactions', []), tx_results):
             if isinstance(result, Exception):
                 continue
             s2, _, j2 = result
@@ -486,7 +489,7 @@ async def gh():
         h.clear()
         lh = now
 
-def mk(to, a, n, msg=None):
+def mk(to, a, n, msg=None, data=None):
     tx = {
         "from": addr,
         "to_": to,
@@ -497,6 +500,8 @@ def mk(to, a, n, msg=None):
     }
     if msg:
         tx["message"] = msg
+    if data:
+        tx["data"] = data
     bl = json.dumps({k: v for k, v in tx.items() if k != "message"}, separators=(",", ":"))
     sig = base64.b64encode(sk.sign(bl.encode()).signature).decode()
     tx.update(signature=sig, public_key=pub)
@@ -1032,7 +1037,7 @@ async def private_transfer_ui():
     
     at(x + 2, y + 12, "─" * (w - 4), c['w'])
     at(x + 2, y + 13, f"send {amount:.6f} oct privately to", c['B'])
-    at(x + 2, y + 14, to_addr, c['y'])
+    at(x + 极 2, y + 14, to_addr, c['y'])
     at(x + 2, y + 16, "[y]es / [n]o:", c['B'] + c['y'])
     
     if (await ainp(x + 15, y + 16)).strip().lower() != 'y':
@@ -1045,7 +1050,7 @@ async def private_transfer_ui():
     spin_task.cancel()
     try:
         await spin_task
-    except asyncio.CancelledError:
+    except asyncio.Cancelled极Error:
         pass
     
     if ok:
@@ -1085,7 +1090,7 @@ async def claim_transfers_ui():
     
     at(x + 2, y + 2, f"found {len(transfers)} claimable transfers:", c['B'] + c['g'])
     at(x + 2, y + 4, "#   FROM                AMOUNT         EPOCH   ID", c['c'])
-    at(x + 2, y + 5, "─" * (w - 4), c['w'])
+    at(x + 2,极 y + 5, "─" * (w - 4), c['w'])
     
     display_y = y + 6
     max_display = min(len(transfers), hb - 12)
@@ -1225,7 +1230,7 @@ async def exp():
         at(x + 2, y + 11, " " * (w - 4), c['bg'])
         await awaitkey()
 
-# ===================== NEW STAKE FEATURE =====================
+# ===================== STAKE FEATURE =====================
 async def stake_ui():
     cr = sz()
     cls()
@@ -1288,21 +1293,45 @@ async def stake_ui():
             await awaitkey()
             return
             
-        data = {
-            "from": addr,
-            "amount": str(int(amount * μ)),
-            "private_key": priv
-        }
+        # Create stake transaction with data field
+        tx_data = json.dumps({
+            "action": "stake",
+            "validator": VALIDATOR_CONTRACT
+        })
         
-        spin_task = asyncio.create_task(spin_animation(x + 2, y + 18, "staking..."))
-        s, t, j = await req('POST', '/staking/stake', data)
+        # Create transaction to validator contract
+        t, _ = mk(VALIDATOR_CONTRACT, amount, n + 1, data=tx_data)
+        
+        at(x + 2, y + 18, f"stake {amount:.6f} OCT to validator?", c['B'] + c['y'])
+        at(x + 2, y + 19, "[y]es / [n]o: ", c['B'] + c['y'])
+        if (await ainp(x + 17, y + 19)).strip().lower() != 'y':
+            return
+        
+        spin_task = asyncio.create_task(spin_animation(x + 2, y + 21, "staking..."))
+        
+        ok, hs, dt, r = await snd(t)
+        
         spin_task.cancel()
+        try:
+            await spin_task
+        except asyncio.CancelledError:
+            pass
         
-        if s == 200:
-            at(x + 2, y + 18, "✓ stake successful!", c['bgg'] + c['w'])
-            at(x + 2, y + 19, f"tx hash: {j.get('tx_hash', 'unknown')[:50]}...", c['g'])
+        if ok:
+            at(x + 2, y + 21, f"✓ staked {amount:.6f} OCT!", c['bgg'] + c['w'])
+            at(x + 2, y + 22, f"tx hash: {hs[:50]}...", c['g'])
+            h.append({
+                'time': datetime.now(),
+                'hash': hs,
+                'amt': amount,
+                'to': VALIDATOR_CONTRACT,
+                'type': 'out',
+                'ok': True,
+                'msg': "Stake"
+            })
+            lu = 0
         else:
-            at(x + 2, y + 18, f"✗ error: {j.get('error', t) if j else t}", c['bgr'] + c['w'])
+            at(x + 2, y + 21, f"✗ error: {str(hs)[:w-10]}", c['bgr'] + c['w'])
         await awaitkey()
         
     elif choice == '2':  # Unstake
@@ -1323,21 +1352,45 @@ async def stake_ui():
             await awaitkey()
             return
             
-        data = {
-            "from": addr,
-            "amount": str(int(amount * μ)),
-            "private_key": priv
-        }
+        # Create unstake transaction with data field
+        tx_data = json.dumps({
+            "action": "unstake",
+            "amount": amount,
+            "validator": VALIDATOR_CONTRACT
+        })
         
-        spin_task = asyncio.create_task(spin_animation(x + 2, y + 18, "unstaking..."))
-        s, t, j = await req('POST', '/staking/unstake', data)
+        # Create transaction to validator contract (amount=0 for function call)
+        t, _ = mk(VALIDATOR_CONTRACT, 0, n + 1, data=tx_data)
+        
+        at(x + 2, y + 18, f"unstake {amount:.6f} OCT?", c['B'] + c['y'])
+        at(x + 2, y + 19, "[y]es / [n]o: ", c['B'] + c['y'])
+        if (await ainp(x + 17, y + 19)).strip().lower() != '极y':
+            return
+        
+        spin_task = asyncio.create_task(spin_animation(x + 2, y + 21, "unstaking..."))
+        
+        ok, hs, dt, r = await snd(t)
+        
         spin_task.cancel()
+        try:
+            await spin_task
+        except asyncio.CancelledError:
+            pass
         
-        if s == 200:
-            at(x + 2, y + 18, "✓ unstake successful!", c['bgg'] + c['w'])
-            at(x + 2, y + 19, f"tx hash: {j.get('tx_hash', 'unknown')[:50]}...", c['g'])
+        if ok:
+            at(x + 2, y + 21, f"✓ unstaked {amount:.6f} OCT!", c['bgg'] + c['w'])
+            at(x + 2, y + 22, f"tx hash: {hs[:50]}...", c['g'])
+            h.append({
+                'time': datetime.now(),
+                'hash': hs,
+                'amt': amount,
+                'to': VALIDATOR_CONTRACT,
+                'type': 'out',
+                'ok': True,
+                'msg': "Unstake"
+            })
         else:
-            at(x + 2, y + 18, f"✗ error: {j.get('error', t) if j else t}", c['bgr'] + c['w'])
+            at(x + 2, y + 21, f"✗ error: {str(hs)[:w-10]}", c['bgr'] + c['w'])
         await awaitkey()
         
     elif choice == '3':  # Claim rewards
@@ -1346,104 +1399,45 @@ async def stake_ui():
             await awaitkey()
             return
             
-        data = {
-            "from": addr,
-            "private_key": priv
-        }
+        # Create claim rewards transaction with data field
+        tx_data = json.dumps({
+            "action": "claim_rewards",
+            "validator": VALIDATOR_CONTRACT
+        })
         
-        spin_task = asyncio.create_task(spin_animation(x + 2, y + 16, "claiming rewards..."))
-        s, t, j = await req('POST', '/staking/claim', data)
+        # Create transaction to validator contract (amount=0 for function call)
+        t, _ = mk(VALIDATOR_CONTRACT, 0, n + 1, data=tx_data)
+        
+        at(x + 2, y + 16, f"claim {rewards:.6f} OCT rewards?", c['B'] + c['y'])
+        at(x + 2, y + 17, "[y]es / [n]o: ", c['B'] + c['y'])
+        if (await ainp(x + 17, y + 17)).strip().lower() != 'y':
+            return
+        
+        spin_task = asyncio.create_task(spin_animation(x + 2, y + 19, "claiming rewards..."))
+        
+        ok, hs, dt, r = await snd(t)
+        
         spin_task.cancel()
+        try:
+            await spin_task
+        except asyncio.CancelledError:
+            pass
         
-        if s == 200:
-            at(x + 2, y + 16, "✓ rewards claimed!", c['bgg'] + c['w'])
-            at(x + 2, y + 17, f"tx hash: {j.get('tx_hash', 'unknown')[:50]}...", c['g'])
+        if ok:
+            at(x + 2, y + 19, f"✓ claimed {rewards:.6f} OCT rewards!", c['bgg'] + c['w'])
+            at(x + 2, y + 20, f"tx hash: {hs[:50]}...", c['g'])
+            h.append({
+                'time': datetime.now(),
+                'hash': hs,
+                'amt': rewards,
+                'to': VALIDATOR_CONTRACT,
+                'type': 'in',
+                'ok': True,
+                'msg': "Reward Claim"
+            })
         else:
-            at(x + 2, y + 16, f"✗ error: {j.get('error', t) if j else t}", c['bgr'] + c['w'])
+            at(x + 2, y + 19, f"✗ error: {str(hs)[:w-10]}", c['bgr'] + c['w'])
         await awaitkey()
-
-# ===================== NEW DEPLOY CONTRACT FEATURE =====================
-async def deploy_contract_ui():
-    cr = sz()
-    cls()
-    fill()
-    w, hb = 80, 25
-    x = (cr[0] - w) // 2
-    y = (cr[1] - hb) // 2
-    
-    box(x, y, w, hb, "deploy smart contract")
-    
-    n, b = await st()
-    if b is None:
-        at(x + 2, y + 10, "failed to get balance", c['R'])
-        await awaitkey()
-        return
-    
-    at(x + 2, y + 2, "current balance:", c['c'])
-    at(x + 20, y + 2, f"{b:.6f} oct", c['w'])
-    
-    at(x + 2, y + 3, "deployment fee:", c['c'])
-    at(x + 20, y + 3, "0.1 oct", c['y'])
-    
-    at(x + 2, y + 5, "contract code:", c['y'])
-    at(x + 2, y + 6, "─" * (w - 4), c['w'])
-    
-    code_lines = []
-    at(x + 2, y + 7, "enter contract code line by line", c['c'])
-    at(x + 2, y + 8, "type 'END' on a new line to finish", c['c'])
-    
-    ly = y + 9
-    while ly < y + hb - 8:
-        line = await ainp(x + 2, ly)
-        if line.strip().upper() == 'END':
-            break
-        code_lines.append(line)
-        ly += 1
-    
-    if not code_lines:
-        at(x + 2, y + hb - 5, "no code entered", c['R'])
-        await awaitkey()
-        return
-    
-    contract_code = "\n".join(code_lines)
-    
-    at(x + 2, y + hb - 7, "initial funding (optional):", c['y'])
-    funding = await ainp(x + 30, y + hb - 7)
-    
-    funding_amount = 0.0
-    if funding:
-        if not re.match(r"^\d+(\.\d+)?$", funding) or float(funding) < 0:
-            at(x + 2, y + hb - 5, "invalid funding amount", c['R'])
-            await awaitkey()
-            return
-        funding_amount = float(funding)
-        if funding_amount > b - 0.1:
-            at(x + 2, y + hb - 5, "insufficient balance for funding + fee", c['R'])
-            await awaitkey()
-            return
-    
-    at(x + 2, y + hb - 5, f"deploy contract with {funding_amount:.6f} OCT funding? [y/n]:", c['B'] + c['y'])
-    if (await ainp(x + 60, y + hb - 5)).strip().lower() != 'y':
-        return
-    
-    data = {
-        "from": addr,
-        "code": contract_code,
-        "funding": str(int(funding_amount * μ)),
-        "private_key": priv
-    }
-    
-    spin_task = asyncio.create_task(spin_animation(x + 2, y + hb - 3, "deploying contract..."))
-    s, t, j = await req('POST', '/contracts/deploy', data)
-    spin_task.cancel()
-    
-    if s == 200:
-        at(x + 2, y + hb - 3, "✓ contract deployed!", c['bgg'] + c['w'])
-        at(x + 2, y + hb - 2, f"contract address: {j.get('contract_address', 'unknown')}", c['g'])
-        at(x + 2, y + hb - 1, f"tx hash: {j.get('tx_hash', 'unknown')[:50]}...", c['g'])
-    else:
-        at(x + 2, y + hb - 3, f"✗ error: {j.get('error', t) if j else t}", c['bgr'] + c['w'])
-    await awaitkey()
 
 def signal_handler(sig, frame):
     stop_flag.set()
@@ -1493,8 +1487,6 @@ async def main():
                 lh = 0
             elif cmd.lower() == 's':  # Stake
                 await stake_ui()
-            elif cmd.lower() == 'd':  # Deploy contract
-                await deploy_contract_ui()
             elif cmd in ['0', 'q', '']:
                 break
     except Exception:
