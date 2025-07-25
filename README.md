@@ -70,8 +70,6 @@ Setelah instalasi dan konfigurasi selesai, jalankan client dengan perintah:
 python client.py
 ```
 
-(Asumsikan nama file utama Anda adalah client.py)
-Anda akan disambut dengan tampilan utama yang menampilkan informasi wallet dan daftar perintah yang tersedia.
 🗺️ Navigasi Menu
 Gunakan tombol angka atau huruf yang tertera di menu untuk melakukan berbagai aksi:
  * [1] Kirim Transaksi: Memulai alur pengiriman token standar.
