@@ -1,110 +1,102 @@
-# Octra CLI Wallet - Terminal Wallet untuk Jaringan Octra
+## Octra Private Client
 
-Sebuah dompet command-line interaktif untuk berinteraksi dengan blockchain **Octra Network**. Dompet ini menyediakan antarmuka terminal yang kaya fitur dengan visualisasi transaksi real-time, manajemen aset, dan kemampuan transaksi batch.
+Selamat datang di Octra Private Client, sebuah command-line interface (CLI) yang powerful dan modern untuk berinteraksi dengan blockchain testnet Octra. Dibangun dengan Python dan asyncio, client ini menawarkan pengalaman yang responsif dan kaya fitur, termasuk dukungan penuh untuk transaksi privat, staking, dan deployment smart contract.
+
+
+| Kategori | Fitur | Deskripsi |
+|---|---|---|
+| 💼 Wallet | Cek Saldo & Nonce | Lihat saldo publik, saldo terenkripsi, dan nonce terakhir secara real-time. |
+|  | Riwayat Transaksi | Tampilan riwayat 50 transaksi terakhir dengan status (pending/epoch). |
+|  | Ekspor Kunci | Opsi untuk menampilkan private key atau menyimpan seluruh data wallet ke file JSON. |
+| 💸 Transaksi | Kirim Transaksi | Mengirim token OCT ke alamat lain dengan pesan opsional. |
+|  | Multi-Send | Mengirim token ke banyak alamat sekaligus dalam satu perintah. |
+| 🔒 Transaksi Privat | Enkripsi & Dekripsi Saldo | Memindahkan saldo dari publik ke privat (terenkripsi) dan sebaliknya. |
+|  | Transfer Privat | Mengirim token secara rahasia dari saldo terenkripsi Anda ke pengguna lain. |
+|  | Klaim Transfer | Menerima token dari transfer privat yang ditujukan untuk Anda. |
+| 📈 Staking | Stake & Unstake | Mengunci token Anda di kontrak validator untuk mendapatkan reward. |
+|  | Klaim Reward | Mengambil reward yang telah terkumpul dari aktivitas staking. |
+| 📄 Smart Contract | Deploy Kontrak | Deploy smart contract baru ke blockchain dari file bytecode (.wasm). |
+| 🖥️ UI | Tampilan Terminal Modern | Antarmuka berbasis teks yang interaktif dengan warna dan layout yang jelas. |
+|  | Asynchronous | Semua operasi jaringan bersifat non-blocking, membuat UI tetap responsif. |
+🚀 Instalasi
+Untuk menjalankan client ini, pastikan Anda memiliki Python 3.8 atau versi yang lebih baru.
+ * Clone Repositori 
 
 ```bash
-#!/usr/bin/env python3
-# Kode lengkap tersedia di atas
+   git clone https://github.com/dicoderin/octra_pre_client.git
 ```
 
-## 🌟 Fitur Utama
-
-- **Antarmuka Pengguna Terminal yang Kaya**:
-  - Visualisasi saldo dan transaksi real-time
-  - Warna dan tata letak intuitif
-  - Animasi spinner untuk operasi jaringan
-
-- **Manajemen Aset**:
-  - Cek saldo dan nonce
-  - Riwayat transaksi dengan status real-time
-  - Detail transaksi lengkap (hash, jumlah, penerima)
-
-- **Transaksi**:
-  - Pengiriman single transaction
-  - **Multi-send transaction** (batch ke banyak alamat)
-  - **Fitur Baru**: Kirim 1 OCT ke banyak alamat dari file `list.txt`
-  - Estimasi biaya transaksi otomatis
-
-- **Keamanan**:
-  - Ekspor kunci pribadi (dengan peringatan keamanan)
-  - Penyimpanan dompet terenkripsi
-  - Validasi alamat OCTRA
-
-- **Fitur Tambahan**:
-  - Manajemen transaksi tertunda (staging)
-  - Penyortiran transaksi berdasarkan waktu
-  - Pelacakan transaksi gagal dan ekspor ke `failed.txt`
-
-## ⚙️ Persyaratan Sistem
-
-- Python 3.7+
-- Dependencies:
-  ```bash
-  pip install aiohttp base58 pyperclick nacl
-  ```
-
-## 🚀 Memulai
-
-1. **Siapkan dompet**:
-   ```bash
-   echo '{"priv":"your_private_key","addr":"your_address","rpc":"https://octra.network"}' > wallet.json
-   ```
-
-2. **Jalankan aplikasi**:
-   ```bash
-   chmod +x cli.py
-   ./cli.py
-   ```
-
-3. **Gunakan menu utama**:
-   ```
-   [1] send tx       [4] export keys
-   [2] refresh       [5] clear history
-   [3] multi send    [6] send 1 OCT to list
-   ```
-
-## 🆕 Fitur Baru: Kirim ke Banyak Alamat
-
-Fitur unggulan terbaru memungkinkan pengiriman 1 OCT ke banyak alamat sekaligus dari file teks:
-
-1. Buat file `list.txt` berisi alamat-alamat OCTRA (satu alamat per baris)
-2. Pilih menu `[6] send 1 OCT to list`
-3. Sistem akan:
-   - Otomatis validasi alamat
-   - Hitung total OCT yang dibutuhkan
-   - Proses pengiriman batch
-   - Simpan alamat gagal ke `failed.txt`
-
-```plaintext
-found 120 valid addresses in list.txt
-total required: 123.456789 OCT
-[23/120] sent 1 OCT to oct1abc...xyz
-completed: 118 success, 2 failed
+```bash
+cd octra_pre_client
 ```
 
- ## 🛠️ Teknologi Dibawah Hood
+ * Buat Virtual Environment (Sangat Direkomendasikan)
+   # Untuk Linux/macOS
 
-- **Asynchronous** I/O dengan `aiohttp` untuk kinerja maksimal
-- **Kriptografi** menggunakan `nacl.signing` untuk keamanan transaksi
-- **Manajemen Thread** dengan `ThreadPoolExecutor`
-- **Antarmuka Terminal** dinamis dengan kontrol kursor ANSI
-- **Format Transaksi** sesuai standar Octra Network
-
-## ⚠️ Catatan Penting
-
-- **Dompet Testnet**: Hanya gunakan dengan token testnet!
-- **Jaga Kunci Pribadi**: Jangan pernah bagikan `wallet.json`
-- **Konfirmasi Transaksi**: Selalu verifikasi detail sebelum mengirim
-- **Backup Reguler**: Simpan salinan aman dari `wallet.json`
-
- ## 📜 Lisensi
-
-```plaintext
-Octra CLI Wallet - Terminal Wallet for Octra Network
-Copyright (C) 2024 Octra Project
-
-Program ini adalah perangkat lunak gratis: Anda dapat menyebarluaskannya dan/atau memodifikasi
-dibawah ketentuan GNU General Public License versi 3.
+```bash
+python3 -m venv venv
+source venv/bin/activate
 ```
 
-> **Disclaimer**: Ini adalah versi pengembangan (dev) - laporkan masalah di [tracker issue](https://github.com/dicoderin/octra_pre_client/issues)
+# Untuk Windows
+
+```bash
+python -m venv venv
+.\venv\Scripts\activate
+```
+
+ * Instal Dependensi
+```bash
+pip install -r requirements.txt
+```
+
+⚙️ Konfigurasi
+Sebelum menjalankan client, Anda harus membuat file konfigurasi wallet bernama wallet.json di direktori yang sama dengan skrip.
+ * Buat file wallet.json.
+ * Isi dengan struktur berikut menggunakan data wallet Anda:
+```bash
+{
+  "priv": "PRIVATE_KEY_ANDA_DALAM_BENTUK_BASE64",
+  "addr": "ALAMAT_WALLET_OCTRA_ANDA",
+  "rpc": "http://ALAMAT_IP_RPC_NODE:8080"
+}
+```
+
+> PENTING: Jaga kerahasiaan file wallet.json Anda! File ini berisi private key yang memberikan akses penuh ke dana Anda.
+> 
+▶️ Menjalankan Client
+Setelah instalasi dan konfigurasi selesai, jalankan client dengan perintah:
+```bash
+python client.py
+```
+
+(Asumsikan nama file utama Anda adalah client.py)
+Anda akan disambut dengan tampilan utama yang menampilkan informasi wallet dan daftar perintah yang tersedia.
+🗺️ Navigasi Menu
+Gunakan tombol angka atau huruf yang tertera di menu untuk melakukan berbagai aksi:
+ * [1] Kirim Transaksi: Memulai alur pengiriman token standar.
+ * [4] Enkripsi Saldo: Memulai alur untuk menyembunyikan saldo publik Anda.
+ * [S] Staking: Membuka submenu untuk staking, unstaking, dan klaim reward.
+ * [D] Deploy Contract: Memulai alur untuk deploy smart contract baru.
+ * [0] Keluar: Menutup aplikasi.
+📝 Contoh Alur Kerja
+1. Deploy Smart Contract
+ * Siapkan file bytecode smart contract Anda yang sudah terkompilasi (misalnya my_contract.wasm).
+ * Jalankan client.
+ * Tekan D untuk masuk ke menu Deploy Contract.
+ * Masukkan path lengkap ke file .wasm Anda saat diminta.
+ * Konfirmasi detail transaksi.
+ * Client akan mengirim transaksi dan menampilkan alamat kontrak baru jika berhasil.
+2. Melakukan Transfer Privat
+ * Pastikan Anda memiliki saldo terenkripsi. Jika tidak, gunakan menu [4] untuk mengenkripsi sebagian saldo publik Anda.
+ * Tekan [6] untuk masuk ke menu Private Transfer.
+ * Masukkan alamat penerima dan jumlah yang ingin dikirim.
+ * Konfirmasi transaksi. Token akan dikirim secara privat dan dapat diklaim oleh penerima menggunakan menu [7].
+
+## 🤝 Berkontribusi
+Kontribusi dari komunitas sangat kami hargai! Jika Anda ingin membantu mengembangkan proyek ini, silakan ikuti langkah-langkah berikut:
+ * Fork repositori ini.
+ * Buat branch baru untuk fitur Anda (git checkout -b fitur/nama-fitur).
+ * Lakukan perubahan dan commit (git commit -m 'Menambahkan fitur X').
+ * Push ke branch Anda (git push origin fitur/nama-fitur).
+ * Buat Pull Request baru.
