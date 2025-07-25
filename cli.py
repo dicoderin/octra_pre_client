@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Diperlukan package: pip install pynacl aiohttp cryptography "pyperclip>=1.8"
+
 import json, base64, hashlib, time, sys, re, os, shutil, asyncio, aiohttp, threading
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
@@ -449,7 +451,7 @@ async def gh():
         existing_hashes = {tx['hash'] for tx in h}
         nh = []
         
-        for i, (ref, result) in enumerate(zip(j.get('recent_transactions', []), tx_results):
+        for i, (ref, result) in enumerate(zip(j.get('recent_transactions', []), tx_results)):
             if isinstance(result, Exception):
                 continue
             s2, _, j2 = result
@@ -502,7 +504,12 @@ def mk(to, a, n, msg=None, data=None):
         tx["message"] = msg
     if data:
         tx["data"] = data
-    bl = json.dumps({k: v for k, v in tx.items() if k != "message"}, separators=(",", ":"))
+    # For contract creation, 'to_' might be None. The key should still be included for signing.
+    bl_data = {k: v for k, v in tx.items() if k != "message"}
+    if bl_data.get('to_') is None:
+        bl_data['to_'] = None # Explicitly set to null for JSON dump
+
+    bl = json.dumps(bl_data, separators=(",", ":"))
     sig = base64.b64encode(sk.sign(bl.encode()).signature).decode()
     tx.update(signature=sig, public_key=pub)
     return tx, hashlib.sha256(bl.encode()).hexdigest()
@@ -568,7 +575,18 @@ async def expl(x, y, w, hb):
             is_pending = not tx.get('epoch')
             time_color = c['y'] if is_pending else c['w']
             at(x + 2, y + 14 + display_count, tx['time'].strftime('%H:%M:%S'), time_color)
-            at(x + 11, y + 14 + display_count, " in" if tx['type'] == 'in' else "out", c['g'] if tx['type'] == 'in' else c['R'])
+            
+            tx_type = tx['type']
+            type_str = " in"
+            type_color = c['g']
+            if tx_type == 'out':
+                type_str = "out"
+                type_color = c['R']
+            elif tx_type == 'deploy':
+                type_str = "dep"
+                type_color = c['c']
+            at(x + 11, y + 14 + display_count, type_str, type_color)
+
             at(x + 16, y + 14 + display_count, f"{float(tx['amt']):>10.6f}", c['w'])
             at(x + 28, y + 14 + display_count, str(tx.get('to', '---')), c['y'])
             if tx.get('msg'):
@@ -1037,7 +1055,7 @@ async def private_transfer_ui():
     
     at(x + 2, y + 12, "─" * (w - 4), c['w'])
     at(x + 2, y + 13, f"send {amount:.6f} oct privately to", c['B'])
-    at(x + 极 2, y + 14, to_addr, c['y'])
+    at(x + 2, y + 14, to_addr, c['y'])
     at(x + 2, y + 16, "[y]es / [n]o:", c['B'] + c['y'])
     
     if (await ainp(x + 15, y + 16)).strip().lower() != 'y':
@@ -1050,7 +1068,7 @@ async def private_transfer_ui():
     spin_task.cancel()
     try:
         await spin_task
-    except asyncio.Cancelled极Error:
+    except asyncio.CancelledError:
         pass
     
     if ok:
@@ -1090,7 +1108,7 @@ async def claim_transfers_ui():
     
     at(x + 2, y + 2, f"found {len(transfers)} claimable transfers:", c['B'] + c['g'])
     at(x + 2, y + 4, "#   FROM                AMOUNT         EPOCH   ID", c['c'])
-    at(x + 2,极 y + 5, "─" * (w - 4), c['w'])
+    at(x + 2, y + 5, "─" * (w - 4), c['w'])
     
     display_y = y + 6
     max_display = min(len(transfers), hb - 12)
@@ -1364,7 +1382,7 @@ async def stake_ui():
         
         at(x + 2, y + 18, f"unstake {amount:.6f} OCT?", c['B'] + c['y'])
         at(x + 2, y + 19, "[y]es / [n]o: ", c['B'] + c['y'])
-        if (await ainp(x + 17, y + 19)).strip().lower() != '极y':
+        if (await ainp(x + 17, y + 19)).strip().lower() != 'y':
             return
         
         spin_task = asyncio.create_task(spin_animation(x + 2, y + 21, "unstaking..."))
@@ -1439,6 +1457,94 @@ async def stake_ui():
             at(x + 2, y + 19, f"✗ error: {str(hs)[:w-10]}", c['bgr'] + c['w'])
         await awaitkey()
 
+async def deploy_contract_ui():
+    """UI flow for deploying a smart contract."""
+    cr = sz()
+    cls()
+    fill()
+    w, hb = 80, 20
+    x = (cr[0] - w) // 2
+    y = (cr[1] - hb) // 2
+    
+    box(x, y, w, hb, "deploy smart contract")
+    at(x + 2, y + 2, "Path to compiled contract bytecode file:", c['y'])
+    at(x + 2, y + 3, "e.g., /path/to/my_contract.wasm or C:\\Users\\...\\contract.bin", c['c'])
+    
+    file_path = await ainp(x + 2, y + 4)
+    if not file_path:
+        return
+        
+    try:
+        with open(file_path, 'r') as f:
+            bytecode = f.read()
+        at(x + 2, y + 6, f"✓ File found. Bytecode size: {len(bytecode)} bytes.", c['g'])
+    except FileNotFoundError:
+        at(x + 2, y + 6, f"✗ Error: File not found at '{file_path}'", c['R'])
+        await awaitkey()
+        return
+    except Exception as e:
+        at(x + 2, y + 6, f"✗ Error reading file: {e}", c['R'])
+        await awaitkey()
+        return
+        
+    global lu
+    lu = 0
+    n, b = await st()
+    if n is None:
+        at(x + 2, y + 8, "Failed to get current nonce!", c['bgr'] + c['w'])
+        await awaitkey()
+        return
+
+    # A small fee is required for deployment
+    fee = 0.003 
+    if not b or b < fee:
+        at(x + 2, y + 8, f"Insufficient balance for deployment fee (need {fee} oct)", c['bgr'] + c['w'])
+        await awaitkey()
+        return
+
+    at(x + 2, y + 8, "─" * (w - 4), c['w'])
+    at(x + 2, y + 9, "This will deploy the contract to the blockchain.", c['B'] + c['y'])
+    at(x + 2, y + 10, f"Nonce: {n + 1}, Fee: {fee} oct", c['y'])
+    at(x + 2, y + 12, "Confirm deployment? [y/n]:", c['B'] + c['y'])
+
+    if (await ainp(x + 30, y + 12)).strip().lower() != 'y':
+        return
+        
+    spin_task = asyncio.create_task(spin_animation(x + 2, y + 14, "deploying contract..."))
+    
+    # For contract deployment, 'to' is None and amount is 0. The bytecode is in 'data'.
+    t, tx_hash = mk(to=None, a=0, n=n + 1, data=bytecode)
+    ok, _, dt, r = await snd(t)
+    
+    spin_task.cancel()
+    try:
+        await spin_task
+    except asyncio.CancelledError:
+        pass
+        
+    if ok and r:
+        contract_addr = r.get('contract_address')
+        at(x + 2, y + 14, f"✓ Contract deployment accepted!", c['bgg'] + c['w'])
+        at(x + 2, y + 15, f"Tx Hash: {tx_hash}", c['g'])
+        if contract_addr:
+            at(x + 2, y + 16, f"New Contract Address: {contract_addr}", c['B'] + c['g'])
+        at(x + 2, y + 17, f"Time: {dt:.2f}s", c['w'])
+        
+        h.append({
+            'time': datetime.now(),
+            'hash': tx_hash,
+            'amt': 0,
+            'to': contract_addr or "CONTRACT",
+            'type': 'deploy',
+            'ok': True,
+        })
+        lu = 0
+    else:
+        at(x + 2, y + 14, f"✗ Contract deployment failed!", c['bgr'] + c['w'])
+        at(x + 2, y + 15, f"Error: {str(r)[:w-12]}", c['R'])
+
+    await awaitkey()
+
 def signal_handler(sig, frame):
     stop_flag.set()
     if session:
@@ -1485,8 +1591,10 @@ async def main():
             elif cmd == '9':
                 h.clear()
                 lh = 0
-            elif cmd.lower() == 's':  # Stake
+            elif cmd.lower() == 's':
                 await stake_ui()
+            elif cmd.lower() == 'd':
+                await deploy_contract_ui()
             elif cmd in ['0', 'q', '']:
                 break
     except Exception:
@@ -1510,3 +1618,4 @@ if __name__ == "__main__":
         cls()
         print(f"{c['r']}")
         os._exit(0)
+
