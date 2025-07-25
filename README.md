@@ -1,6 +1,7 @@
 ## Octra Private Client
 
 Selamat datang di Octra Private Client, sebuah command-line interface (CLI) yang powerful dan modern untuk berinteraksi dengan blockchain testnet Octra. Dibangun dengan Python dan asyncio, client ini menawarkan pengalaman yang responsif dan kaya fitur, termasuk dukungan penuh untuk transaksi privat, staking, dan deployment smart contract.
+[generate files .wasm?](https://github.com/dicoderin/octra_pre_client/blob/main/how%20to%20generate%20wasm%20files.md)
 
 
 | Kategori | Fitur | Deskripsi |
